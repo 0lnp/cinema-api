@@ -1,8 +1,8 @@
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
-export class PasswordHash {
-  private static readonly algorithm = "scrypt";
-  private static readonly scryptConfig = {
+export class ScryptPasswordHash {
+  public static readonly ALGORITHM = "scrypt";
+  public static readonly SCRIPT_CONFIG = {
     keylen: 64,
     N: Math.pow(2, 17),
     r: 8,
@@ -15,7 +15,7 @@ export class PasswordHash {
   public static hash(plainText: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const salt = randomBytes(32);
-      const { keylen, N, r, p, maxmem } = this.scryptConfig;
+      const { keylen, N, r, p, maxmem } = this.SCRIPT_CONFIG;
 
       scrypt(
         plainText,
@@ -26,7 +26,7 @@ export class PasswordHash {
           if (err) reject(err);
 
           // PHC-like format: $algorithm$N$r$p$salt$hash
-          const hash = `$${this.algorithm}$${N}$${r}$${p}$${salt.toString("hex")}$${derivedKey.toString("hex")}`;
+          const hash = `$${this.ALGORITHM}$${N}$${r}$${p}$${salt.toString("hex")}$${derivedKey.toString("hex")}`;
           resolve(hash);
         },
       );
@@ -41,9 +41,12 @@ export class PasswordHash {
       const parts = storedHash.split("$").filter(Boolean);
       const [_, N, r, p, saltHex, hashHex] = parts;
 
+      if (!N || !r || !p || !saltHex || !hashHex)
+        throw new Error("Invalid stored hash");
+
       const salt = Buffer.from(saltHex, "hex");
       const storedHashBuffer = Buffer.from(hashHex, "hex");
-      const { keylen, maxmem } = this.scryptConfig;
+      const { keylen, maxmem } = this.SCRIPT_CONFIG;
 
       scrypt(
         plainText,
