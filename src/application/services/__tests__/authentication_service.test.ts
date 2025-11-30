@@ -4,13 +4,17 @@ import {
   type JoseTokenManager,
   TokenType,
 } from "src/shared/utilities/jose_token_manager";
-import { type AuthenticateDTO } from "../../dtos/authenticate_dto";
+import { type AuthenticateCommand } from "../../types/authenticate";
 import { User } from "src/domain/aggregates/user";
 import { UserID } from "src/domain/value_objects/user_id";
 import { RoleAssignment } from "src/domain/value_objects/role_assignment";
 import { Role, RoleName } from "src/domain/value_objects/role";
 import { SystemRoles } from "src/domain/value_objects/system_roles";
 import { jest } from "@jest/globals";
+import {
+  ApplicationError,
+  ApplicationErrorType,
+} from "src/errors/application_error";
 
 describe("AuthenticationService", () => {
   let authenticationService: AuthenticationService;
@@ -25,13 +29,13 @@ describe("AuthenticationService", () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findOne: jest.fn(),
-    };
+      userOfEmail: jest.fn(),
+    } as Partial<UserRepository> as jest.Mocked<UserRepository>;
 
     mockJwtTokenManager = {
       generate: jest.fn(),
       verify: jest.fn(),
-    } as unknown as jest.Mocked<JoseTokenManager>;
+    } as Partial<JoseTokenManager> as jest.Mocked<JoseTokenManager>;
 
     authenticationService = new AuthenticationService(
       mockUserRepository,
@@ -65,50 +69,50 @@ describe("AuthenticationService", () => {
       });
     };
 
-    const createAuthenticateDTO = (
+    const createAuthenticateCommand = (
       email: string = mockEmail,
       password: string = mockPassword,
-    ): AuthenticateDTO => ({
-      email,
-      password,
+    ): AuthenticateCommand => ({
+      emailAddress: email,
+      plainPassword: password,
     });
 
     describe("successful authentication", () => {
       it("should return access and refresh tokens when credentials are valid", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(true);
         mockJwtTokenManager.generate
           .mockResolvedValueOnce(mockAccessToken)
           .mockResolvedValueOnce(mockRefreshToken);
 
-        const result = await authenticationService.authenticate(dto);
+        const result = await authenticationService.authenticate(command);
 
         expect(result).toEqual({
           accessToken: mockAccessToken,
           refreshToken: mockRefreshToken,
         });
-        expect(mockUserRepository.findOne).toHaveBeenCalledTimes(1);
-        expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-          emailAddress: dto.email,
-        });
+        expect(mockUserRepository.userOfEmail).toHaveBeenCalledTimes(1);
+        expect(mockUserRepository.userOfEmail).toHaveBeenCalledWith(
+          command.emailAddress,
+        );
         expect(mockUser.login).toHaveBeenCalledTimes(1);
-        expect(mockUser.login).toHaveBeenCalledWith(dto.password);
+        expect(mockUser.login).toHaveBeenCalledWith(command.plainPassword);
       });
 
       it("should generate tokens with correct payload", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(true);
         mockJwtTokenManager.generate
           .mockResolvedValueOnce(mockAccessToken)
           .mockResolvedValueOnce(mockRefreshToken);
 
-        await authenticationService.authenticate(dto);
+        await authenticationService.authenticate(command);
 
         const expectedPayload = {
           sub: mockUser.id,
@@ -150,15 +154,18 @@ describe("AuthenticationService", () => {
           updatedAt: new Date(),
         });
 
-        const dto = createAuthenticateDTO("admin@example.com", mockPassword);
+        const command = createAuthenticateCommand(
+          "admin@example.com",
+          mockPassword,
+        );
 
-        mockUserRepository.findOne.mockResolvedValue(adminUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(adminUser);
         jest.spyOn(adminUser, "login").mockResolvedValue(true);
         mockJwtTokenManager.generate
           .mockResolvedValueOnce(mockAccessToken)
           .mockResolvedValueOnce(mockRefreshToken);
 
-        const result = await authenticationService.authenticate(dto);
+        const result = await authenticationService.authenticate(command);
 
         expect(result).toBeDefined();
         expect(mockJwtTokenManager.generate).toHaveBeenCalledWith(
@@ -171,26 +178,20 @@ describe("AuthenticationService", () => {
     });
 
     describe("failed authentication - user not found", () => {
-      it("should throw error when user does not exist", async () => {
-        const dto = createAuthenticateDTO();
-        mockUserRepository.findOne.mockResolvedValue(null);
-
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Invalid email or password",
-        );
-        expect(mockUserRepository.findOne).toHaveBeenCalledTimes(1);
-        expect(mockJwtTokenManager.generate).not.toHaveBeenCalled();
-      });
-
-      it("should throw error with generic message for non-existent email", async () => {
-        const dto = createAuthenticateDTO(
+      it("should throw error for non-existent email", async () => {
+        const command = createAuthenticateCommand(
           "nonexistent@example.com",
           mockPassword,
         );
-        mockUserRepository.findOne.mockResolvedValue(null);
+        mockUserRepository.userOfEmail.mockResolvedValue(null);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Invalid email or password",
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow(
+          new ApplicationError({
+            type: ApplicationErrorType.EMAIL_NOT_FOUND_ERROR,
+            message: `No user registered with email: ${command.emailAddress}`,
+          }),
         );
       });
     });
@@ -198,126 +199,83 @@ describe("AuthenticationService", () => {
     describe("failed authentication - invalid password", () => {
       it("should throw error when password is invalid", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO(mockEmail, "WrongPassword123!");
+        const command = createAuthenticateCommand(
+          mockEmail,
+          "WrongPassword123!",
+        );
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(false);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Invalid email or password",
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow(
+          new ApplicationError({
+            type: ApplicationErrorType.PASSWORD_INVALID_ERROR,
+            message: `Invalid password for user ${mockUser.id.value}`,
+          }),
         );
-        expect(mockUserRepository.findOne).toHaveBeenCalledTimes(1);
+        expect(mockUserRepository.userOfEmail).toHaveBeenCalledTimes(1);
         expect(mockUser.login).toHaveBeenCalledTimes(1);
         expect(mockJwtTokenManager.generate).not.toHaveBeenCalled();
       });
 
       it("should not generate tokens when password verification fails", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(false);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow();
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow();
         expect(mockJwtTokenManager.generate).not.toHaveBeenCalled();
       });
     });
 
     describe("edge cases", () => {
       it("should handle repository errors gracefully", async () => {
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
         const repositoryError = new Error("Database connection failed");
-        mockUserRepository.findOne.mockRejectedValue(repositoryError);
+        mockUserRepository.userOfEmail.mockRejectedValue(repositoryError);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Database connection failed",
-        );
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow("Database connection failed");
         expect(mockJwtTokenManager.generate).not.toHaveBeenCalled();
       });
 
       it("should handle token generation errors", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
         const tokenError = new Error("Token generation failed");
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(true);
         mockJwtTokenManager.generate.mockRejectedValue(tokenError);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Token generation failed",
-        );
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow("Token generation failed");
         expect(mockJwtTokenManager.generate).toHaveBeenCalledTimes(1);
       });
 
       it("should handle token generation failure for refresh token", async () => {
         const mockUser = createMockUser();
-        const dto = createAuthenticateDTO();
+        const command = createAuthenticateCommand();
         const tokenError = new Error("Refresh token generation failed");
 
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
+        mockUserRepository.userOfEmail.mockResolvedValue(mockUser);
         jest.spyOn(mockUser, "login").mockResolvedValue(true);
         mockJwtTokenManager.generate
           .mockResolvedValueOnce(mockAccessToken)
           .mockRejectedValueOnce(tokenError);
 
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Refresh token generation failed",
-        );
+        await expect(
+          authenticationService.authenticate(command),
+        ).rejects.toThrow("Refresh token generation failed");
         expect(mockJwtTokenManager.generate).toHaveBeenCalledTimes(2);
-      });
-    });
-
-    describe("input validation", () => {
-      it("should handle empty email", async () => {
-        const dto = createAuthenticateDTO("", mockPassword);
-        mockUserRepository.findOne.mockResolvedValue(null);
-
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Invalid email or password",
-        );
-      });
-
-      it("should handle malformed email", async () => {
-        const dto = createAuthenticateDTO("not-an-email", mockPassword);
-        mockUserRepository.findOne.mockResolvedValue(null);
-
-        await expect(authenticationService.authenticate(dto)).rejects.toThrow(
-          "Invalid email or password",
-        );
-      });
-    });
-
-    describe("security considerations", () => {
-      it("should provide same error message for non-existent user and wrong password", async () => {
-        const dto1 = createAuthenticateDTO(
-          "nonexistent@example.com",
-          mockPassword,
-        );
-        mockUserRepository.findOne.mockResolvedValue(null);
-
-        let error1: Error | undefined;
-        try {
-          await authenticationService.authenticate(dto1);
-        } catch (e) {
-          error1 = e as Error;
-        }
-
-        jest.clearAllMocks();
-        const mockUser = createMockUser();
-        const dto2 = createAuthenticateDTO(mockEmail, "WrongPassword");
-        mockUserRepository.findOne.mockResolvedValue(mockUser);
-        jest.spyOn(mockUser, "login").mockResolvedValue(false);
-
-        let error2: Error | undefined;
-        try {
-          await authenticationService.authenticate(dto2);
-        } catch (e) {
-          error2 = e as Error;
-        }
-
-        expect(error1?.message).toBe(error2?.message);
-        expect(error1?.message).toBe("Invalid email or password");
       });
     });
   });

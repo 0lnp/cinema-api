@@ -3,7 +3,7 @@ import { Permission, PermissionAction, PermissionResource } from "./permission";
 import { RoleName } from "./role";
 
 export class SystemRoles {
-  public static allRolePermissions(): Record<
+  private static allRolePermissions(): Record<
     RoleName,
     NonEmptyArray<Permission>
   > {

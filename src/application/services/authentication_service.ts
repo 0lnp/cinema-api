@@ -1,28 +1,40 @@
 import { type UserRepository } from "src/domain/repositories/user_repository";
-import { type AuthenticateDTO } from "../dtos/authenticate_dto";
+import {
+  type AuthenticateResult,
+  type AuthenticateCommand,
+} from "../types/authenticate";
 import {
   type JoseTokenManager,
   type TokenGeneratePayload,
   TokenType,
 } from "src/shared/utilities/jose_token_manager";
-
-interface AuthenticateResult {
-  accessToken: string;
-  refreshToken: string;
-}
+import {
+  ApplicationError,
+  ApplicationErrorType,
+} from "src/errors/application_error";
 
 export class AuthenticationService {
-  constructor(
+  public constructor(
     private userRepository: UserRepository,
     private jwtTokenManager: JoseTokenManager,
   ) {}
 
-  public async authenticate(dto: AuthenticateDTO): Promise<AuthenticateResult> {
-    const user = await this.userRepository.findOne({ emailAddress: dto.email });
-    if (!user) throw new Error("Invalid email or password");
+  public async authenticate(
+    command: AuthenticateCommand,
+  ): Promise<AuthenticateResult> {
+    const user = await this.userRepository.userOfEmail(command.emailAddress);
+    if (!user)
+      throw new ApplicationError({
+        type: ApplicationErrorType.EMAIL_NOT_FOUND_ERROR,
+        message: `No user registered with email: ${command.emailAddress}`,
+      });
 
-    const isPasswordValid = await user.login(dto.password);
-    if (!isPasswordValid) throw new Error("Invalid email or password");
+    const isPasswordValid = await user.login(command.plainPassword);
+    if (!isPasswordValid)
+      throw new ApplicationError({
+        type: ApplicationErrorType.PASSWORD_INVALID_ERROR,
+        message: `Invalid password for user ${user.id.value}`,
+      });
 
     const payload: TokenGeneratePayload = {
       sub: user.id,
