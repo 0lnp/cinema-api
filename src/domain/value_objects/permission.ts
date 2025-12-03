@@ -21,21 +21,22 @@ export class Permission {
   public implies(other: Permission): boolean {
     const isSameResource = this.resource === other.resource;
     const isSameAction = this.action === other.action;
-
     if (isSameResource && isSameAction) return true;
     return false;
   }
 
   public toString(): string {
-    return `${this.resource}:${this.action}`;
+    const resource = this.resource.toLowerCase();
+    const action = this.action.toLowerCase();
+    return `${resource}:${action}`;
   }
 
   public static fromString(permissionString: string): Permission {
     const [resource, action] = permissionString.split(":");
     if (!resource || !action) throw new Error("Invalid permission string");
     return new Permission(
-      action as PermissionAction,
-      resource as PermissionResource,
+      action.toUpperCase() as PermissionAction,
+      resource.toUpperCase() as PermissionResource,
     );
   }
 }

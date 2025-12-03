@@ -1,4 +1,3 @@
-export interface BaseErrorProps<T> {
-  type: T;
-  message: string;
-}
+import { ClassProps } from "./class_props";
+
+export type BaseErrorProps<T> = Omit<ClassProps<T>, "stack" | "cause" | "name">;
