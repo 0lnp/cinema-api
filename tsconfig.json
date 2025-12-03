@@ -13,6 +13,11 @@
     "baseUrl": "./",
     "skipLibCheck": true,
     "incremental": true,
-    "strict": true
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   }
 }

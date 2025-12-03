@@ -1,0 +1,17 @@
+{
+  "testEnvironment": "node",
+  "transform": {
+    "^.+\\.[tj]s?$": [
+      "ts-jest",
+      {
+        "useESM": true,
+        "tsconfig": "tsconfig.jest.json"
+      }
+    ]
+  },
+  "moduleNameMapper": { "^src/(.*)$": "<rootDir>/src/$1" },
+  "transformIgnorePatterns": ["/node_modules/(?!(jose)/)"],
+  "extensionsToTreatAsEsm": [".ts"],
+  "testTimeout": 20000,
+  "modulePathIgnorePatterns": ["<rootDir>/dist/"]
+}
