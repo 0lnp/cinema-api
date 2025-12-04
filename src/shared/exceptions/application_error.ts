@@ -1,8 +1,8 @@
 import { BaseErrorProps } from "src/shared/types/base_error_props";
 
 export enum ApplicationErrorCode {
-  ILLEGAL_ARGUMENT = "ILLEGAL_ARGUMENT",
   INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
+  VALIDATION_ERROR = "VALIDATION_ERROR",
 }
 
 export class ApplicationError extends Error {

@@ -25,13 +25,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
 
-    const { status: statusCode, message, error } = this.mapException(exception);
+    const {
+      status: statusCode,
+      message,
+      errors,
+    } = this.mapException(exception);
 
     const responseBody = {
       message,
       timestamp: new Date().toISOString(),
       path: request.url,
-      ...(error && { details: error }),
+      errors,
     };
 
     httpAdapter.reply(ctx.getResponse(), responseBody, statusCode);
@@ -40,7 +44,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private mapException(exception: unknown): {
     status: HttpStatus;
     message: string;
-    error?: Record<string, any>;
+    errors?: Record<string, any>;
   } {
     if (
       exception instanceof HttpException &&
@@ -78,11 +82,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof ApplicationError) {
       switch (exception.code) {
-        case ApplicationErrorCode.ILLEGAL_ARGUMENT:
+        case ApplicationErrorCode.VALIDATION_ERROR:
           return {
             status: HttpStatus.BAD_REQUEST,
             message: exception.message,
-            error: exception.details,
+            errors: exception.details,
           };
         case ApplicationErrorCode.INVALID_CREDENTIALS:
           return {
