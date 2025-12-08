@@ -82,6 +82,7 @@ export class UserLoginService {
     await this.refreshTokenRepository.save(refreshToken);
 
     return {
+      message: "User logged in successfully",
       accessToken,
       refreshToken: rawRefreshToken,
     };

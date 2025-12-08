@@ -49,6 +49,7 @@ export class UserRegisterService {
     await this.userRepository.save(user);
 
     return {
+      message: "User registered successfully",
       userID: userID.value,
     };
   }

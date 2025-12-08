@@ -8,6 +8,7 @@ export const UserLoginDTOSchema = z.object({
 export type UserLoginDTO = z.infer<typeof UserLoginDTOSchema>;
 
 export interface UserLoginResult {
+  message: string;
   accessToken: string;
   refreshToken: string;
 }

@@ -31,6 +31,7 @@ export class AuthMapper {
     result: UserRegisterResult,
   ): BaseSuccessfulResponse<RegisterResponse> {
     return {
+      message: result.message,
       data: {
         user_id: result.userID,
       },
@@ -48,6 +49,7 @@ export class AuthMapper {
     result: UserLoginResult,
   ): BaseSuccessfulResponse<LoginResponse> {
     return {
+      message: result.message,
       data: {
         access_token: result.accessToken,
         refresh_token: result.refreshToken,

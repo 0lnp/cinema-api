@@ -25,5 +25,6 @@ export const UserRegisterDTOSchema = z.object({
 export type UserRegisterDTO = z.infer<typeof UserRegisterDTOSchema>;
 
 export interface UserRegisterResult {
+  message: string;
   userID: string;
 }
