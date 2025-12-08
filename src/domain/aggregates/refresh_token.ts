@@ -1,55 +1,95 @@
-import { ClassProps } from "src/shared/types/class_props";
-import { RefreshTokenID } from "../value_objects/token_id";
-import { UserID } from "../value_objects/user_id";
+import { type ClassProps } from "src/shared/types/class_props";
+import { type TokenID } from "../value_objects/token_id";
+import { type UserID } from "../value_objects/user_id";
+import {
+  InvariantError,
+  InvariantErrorCode,
+} from "src/shared/exceptions/invariant_error";
 
-type RefreshTokenIssueProps = Omit<
-  ClassProps<RefreshToken>,
-  "parentTokenID" | "issuedAt"
->;
+type RefreshTokenIssueProps = Omit<ClassProps<RefreshToken>, "issuedAt">;
+
+export enum TokenStatus {
+  ACTIVE = "ACTIVE",
+  ROTATED = "ROTATED",
+  REVOKED = "REVOKED",
+}
 
 export class RefreshToken {
-  public static REFRESH_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 7 days
-
-  public readonly id: RefreshTokenID;
+  public readonly id: TokenID;
   public readonly userID: UserID;
-  public readonly hashedToken: string;
+  public readonly tokenHash: string;
+  public readonly tokenFamily: TokenID;
+  private _status: TokenStatus;
   public readonly issuedAt: Date;
+  public readonly expiresAt: Date;
 
   public constructor(props: ClassProps<RefreshToken>) {
     this.id = props.id;
     this.userID = props.userID;
-    this.hashedToken = props.hashedToken;
+    this.tokenHash = props.tokenHash;
+    this.tokenFamily = props.tokenFamily;
+    this._status = props.status;
     this.issuedAt = props.issuedAt;
+    this.expiresAt = props.expiresAt;
   }
 
   public static issue(props: RefreshTokenIssueProps): RefreshToken {
-    const issuedAt = new Date();
+    const now = new Date();
+
     const token = new RefreshToken({
       id: props.id,
       userID: props.userID,
-      hashedToken: props.hashedToken,
-      issuedAt,
+      tokenHash: props.tokenHash,
+      tokenFamily: props.tokenFamily,
+      status: TokenStatus.ACTIVE,
+      issuedAt: now,
+      expiresAt: props.expiresAt,
     });
+
     return token;
   }
 
-  public rotate(id: RefreshTokenID, newHashedToken: string): RefreshToken {
-    if (this.isExpired()) {
-      throw new Error("Token is expired");
+  public rotate(props: RefreshTokenIssueProps): RefreshToken {
+    if (this.status !== TokenStatus.ACTIVE) {
+      throw new InvariantError({
+        code: InvariantErrorCode.ROTATION_NOT_PERMITTED,
+        message: "Cannot rotate inactive token",
+      });
     }
 
+    if (this.expiresAt.getTime() < new Date().getTime()) {
+      throw new InvariantError({
+        code: InvariantErrorCode.ROTATION_NOT_PERMITTED,
+        message: "Cannot rotate expired token",
+      });
+    }
+
+    this._status = TokenStatus.ROTATED;
+
     const newToken = RefreshToken.issue({
-      id,
+      id: props.id,
       userID: this.userID,
-      hashedToken: newHashedToken,
+      tokenHash: this.tokenHash,
+      tokenFamily: this.tokenFamily,
+      status: TokenStatus.ACTIVE,
+      expiresAt: props.expiresAt,
     });
+
     return newToken;
   }
 
-  private isExpired(): boolean {
-    return (
-      Date.now() - this.issuedAt.getTime() >
-      RefreshToken.REFRESH_TOKEN_LIFETIME_MS
-    );
+  public revoke(): void {
+    if (this.status !== TokenStatus.ACTIVE) {
+      throw new InvariantError({
+        code: InvariantErrorCode.REVOCATION_NOT_PERMITTED,
+        message: "Cannot revoke inactive token",
+      });
+    }
+
+    this._status = TokenStatus.REVOKED;
+  }
+
+  public get status(): TokenStatus {
+    return this._status;
   }
 }

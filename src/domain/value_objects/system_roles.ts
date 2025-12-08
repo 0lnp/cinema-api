@@ -1,6 +1,12 @@
 import { type NonEmptyArray } from "src/shared/types/non_empty_array";
 import { Permission, PermissionAction, PermissionResource } from "./permission";
-import { RoleName } from "./role";
+
+export enum RoleName {
+  CUSTOMER = "CUSTOMER",
+  BOX_OFFICE_STAFF = "BOX_OFFICE_STAFF",
+  MANAGER = "MANAGER",
+  ADMIN = "ADMIN",
+}
 
 export class SystemRoles {
   private static allRolePermissions(): Record<

@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-export const RegisterDTOSchema = z.object({
-  name: z.string().min(2).max(100),
+export const UserRegisterDTOSchema = z.object({
+  displayName: z.string().min(2).max(100),
   email: z.email(),
   password: z
     .string()
@@ -22,20 +22,8 @@ export const RegisterDTOSchema = z.object({
     ),
 });
 
-export type RegisterDTO = z.infer<typeof RegisterDTOSchema>;
+export type UserRegisterDTO = z.infer<typeof UserRegisterDTOSchema>;
 
-export interface RegisterResult {
+export interface UserRegisterResult {
   userID: string;
-}
-
-export const LoginDTOSchema = z.object({
-  email: z.email(),
-  password: z.string().max(100),
-});
-
-export type LoginDTO = z.infer<typeof LoginDTOSchema>;
-
-export interface LoginResult {
-  accessToken: string;
-  refreshToken: string;
 }

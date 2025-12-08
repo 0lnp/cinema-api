@@ -14,29 +14,31 @@ export enum PermissionAction {
 
 export class Permission {
   public constructor(
-    public readonly action: PermissionAction,
-    public readonly resource: PermissionResource,
+    private readonly action: PermissionAction,
+    private readonly resource: PermissionResource,
   ) {}
 
   public implies(other: Permission): boolean {
-    const isSameResource = this.resource === other.resource;
     const isSameAction = this.action === other.action;
-    if (isSameResource && isSameAction) return true;
+    const isSameResource = this.resource === other.resource;
+    if (isSameAction && isSameResource) return true;
     return false;
   }
 
   public toString(): string {
-    const resource = this.resource.toLowerCase();
-    const action = this.action.toLowerCase();
-    return `${resource}:${action}`;
+    const normalizedAction = this.action.toLowerCase();
+    const normalizedResource = this.resource.toLowerCase();
+    return `${normalizedAction}:${normalizedResource}`;
   }
 
   public static fromString(permissionString: string): Permission {
-    const [resource, action] = permissionString.split(":");
-    if (!resource || !action) throw new Error("Invalid permission string");
-    return new Permission(
-      action.toUpperCase() as PermissionAction,
-      resource.toUpperCase() as PermissionResource,
-    );
+    const [action, resource] = permissionString.split(":");
+    if (!action?.trim().length || !resource?.trim().length) {
+      throw new Error("Invalid permission string");
+    }
+
+    const normalizedAction = action.toUpperCase() as PermissionAction;
+    const normalizedResource = resource.toUpperCase() as PermissionResource;
+    return new Permission(normalizedAction, normalizedResource);
   }
 }

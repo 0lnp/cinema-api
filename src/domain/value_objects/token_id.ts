@@ -1,12 +1,14 @@
-export class RefreshTokenID {
-  public constructor(public readonly value: string) {
-    if (!this.isValidID()) {
-      throw new Error("Invalid refresh token ID format");
-    }
+import { randomUUID } from "node:crypto";
+
+export class TokenID {
+  public constructor(public readonly value: string) {}
+
+  public static generate(): TokenID {
+    const id = `token_${randomUUID()}`;
+    return new TokenID(id);
   }
 
-  private isValidID(): boolean {
-    const idRegex = /^refresh_token_[a-zA-Z0-9_-]{8,}$/;
-    return idRegex.test(this.value);
+  public equals(other: TokenID): boolean {
+    return this.value === other.value;
   }
 }

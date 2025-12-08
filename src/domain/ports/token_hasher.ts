@@ -1,5 +1,3 @@
-export interface TokenHasher {
-  hash(token: string): Promise<string>;
+export abstract class TokenHasher {
+  public abstract hash(token: string): Promise<string>;
 }
-
-export const TOKEN_HASHER_TOKEN = Symbol.for("TokenHasher");
