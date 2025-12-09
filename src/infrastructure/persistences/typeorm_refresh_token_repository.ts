@@ -1,5 +1,5 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { type RefreshToken } from "src/domain/aggregates/refresh_token";
+import { RefreshToken, TokenStatus } from "src/domain/aggregates/refresh_token";
 import { type RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
 import { TokenID } from "src/domain/value_objects/token_id";
 import {
@@ -8,6 +8,7 @@ import {
 } from "src/shared/exceptions/infrastructure_error";
 import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_orm_entity";
 import { Repository } from "typeorm";
+import { UserID } from "src/domain/value_objects/user_id";
 
 export class TypeORMRefreshTokenRepository implements RefreshTokenRepository {
   public constructor(
@@ -61,6 +62,27 @@ export class TypeORMRefreshTokenRepository implements RefreshTokenRepository {
     throw new InfrastructureError({
       code: InfrastructureErrorCode.ID_GENERATION_FAILED,
       message: `Failed to generate unique TokenFamily after ${maxAttempts} attempts`,
+    });
+  }
+
+  public async tokenOfHash(hash: string): Promise<RefreshToken | null> {
+    const token = await this.ormRepository.findOneBy({ tokenHash: hash });
+    return token !== null ? this.toDomain(token) : null;
+  }
+
+  public async revokeByFamily(family: TokenID): Promise<void> {
+    await this.ormRepository.delete({ tokenFamily: family.value });
+  }
+
+  private toDomain(token: RefreshTokenORMEntity): RefreshToken {
+    return new RefreshToken({
+      id: new TokenID(token.id),
+      userID: new UserID(token.userID),
+      tokenHash: token.tokenHash,
+      tokenFamily: new TokenID(token.tokenFamily),
+      status: token.status as TokenStatus,
+      issuedAt: token.issuedAt,
+      expiresAt: token.expiresAt,
     });
   }
 

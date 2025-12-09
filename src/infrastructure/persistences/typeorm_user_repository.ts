@@ -53,6 +53,11 @@ export class TypeORMUserRepository implements UserRepository {
     });
   }
 
+  public async userOfID(id: UserID): Promise<User | null> {
+    const user = await this.ormRepository.findOneBy({ id: id.value });
+    return user !== null ? this.toDomain(user) : null;
+  }
+
   private toDomain(user: UserORMEntity): User {
     return new User({
       id: new UserID(user.id),
