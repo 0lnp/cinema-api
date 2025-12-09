@@ -9,7 +9,6 @@ import {
 import { AppConfig } from "../configs/app_config";
 import { jwtVerify, SignJWT } from "jose";
 import { Inject } from "@nestjs/common";
-import { RefreshToken } from "src/domain/aggregates/refresh_token";
 
 export class JoseTokenGenerator implements TokenGenerator {
   constructor(
@@ -22,19 +21,19 @@ export class JoseTokenGenerator implements TokenGenerator {
     tokenType: "access" | "refresh",
   ): Promise<string> {
     const secretStr = this.configService.get(
-      tokenType === "access" ? "JWT_ACCESS_SECRET" : "JWT_REFRESH_SECRET",
+      tokenType === "access"
+        ? "JWT_ACCESS_TOKEN_SECRET"
+        : "JWT_REFRESH_TOKEN_SECRET",
       { infer: true },
     );
     const secret = new TextEncoder().encode(secretStr);
-    const accessLifetime = this.configService.get("JWT_ACCESS_LIFETIME", {
-      infer: true,
-    });
-    const refreshLifetimeDays = Math.ceil(
-      RefreshToken.REFRESH_TOKEN_LIFETIME_MS / (1000 / 60 / 60 / 24),
+    const lifetime = this.configService.get(
+      tokenType === "access"
+        ? "JWT_ACCESS_TOKEN_LIFETIME"
+        : "JWT_REFRESH_TOKEN_LIFETIME",
+      { infer: true },
     );
     const { sub, ...remaing } = payload;
-    const lifetime =
-      tokenType === "access" ? accessLifetime : refreshLifetimeDays;
 
     const accessToken = new SignJWT(remaing)
       .setProtectedHeader({ alg: "HS256" })
@@ -51,7 +50,9 @@ export class JoseTokenGenerator implements TokenGenerator {
     tokenType: "access" | "refresh",
   ): Promise<C> {
     const secretStr = this.configService.get(
-      tokenType === "access" ? "JWT_ACCESS_SECRET" : "JWT_REFRESH_SECRET",
+      tokenType === "access"
+        ? "JWT_ACCESS_TOKEN_LIFETIME"
+        : "JWT_REFRESH_TOKEN_SECRET",
       { infer: true },
     );
     const secret = new TextEncoder().encode(secretStr);

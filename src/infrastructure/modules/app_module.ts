@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { validate } from "../configs/app_config";
+import { AppConfigSchema } from "../configs/app_config";
 import { APP_FILTER } from "@nestjs/core";
 import { GlobalExceptionFilter } from "src/presentation/filters/global_exception_filter";
 import { AuthModule } from "./auth_module";
@@ -8,7 +8,9 @@ import { AuthModule } from "./auth_module";
 @Module({
   imports: [
     ConfigModule.forRoot({
-      validate,
+      validate(config: Record<string, unknown>) {
+        return AppConfigSchema.parse(config);
+      },
       isGlobal: true,
     }),
     AuthModule,

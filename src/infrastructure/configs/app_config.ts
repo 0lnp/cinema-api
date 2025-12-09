@@ -1,40 +1,18 @@
-import { plainToInstance } from "class-transformer";
-import { IsNumber, IsOptional, IsString, validateSync } from "class-validator";
+import * as z from "zod";
 
-export class AppConfig {
-  @IsOptional()
-  @IsString()
-  APP_HOST: string = "localhost";
-  @IsNumber()
-  APP_PORT: number = 3000;
+export const AppConfigSchema = z.object({
+  APP_PORT: z.coerce.number().default(3000),
 
-  @IsString()
-  DATABASE_HOST!: string;
-  @IsNumber()
-  DATABASE_PORT!: number;
-  @IsString()
-  DATABASE_USER!: string;
-  @IsString()
-  DATABASE_PASSWORD!: string;
-  @IsString()
-  DATABASE_NAME!: string;
+  DATABASE_HOST: z.string().default("localhost"),
+  DATABASE_PORT: z.coerce.number().default(5432),
+  DATABASE_USER: z.string().default("postgres"),
+  DATABASE_PASSWORD: z.string(),
+  DATABASE_NAME: z.string().default("cinema_api"),
 
-  @IsString()
-  JWT_ACCESS_SECRET!: string;
-  @IsString()
-  JWT_ACCESS_LIFETIME: string = "15m";
-  @IsString()
-  JWT_REFRESH_SECRET!: string;
-}
+  JWT_ACCESS_TOKEN_SECRET: z.string().min(20),
+  JWT_ACCESS_TOKEN_LIFETIME: z.string().default("15m"),
+  JWT_REFRESH_TOKEN_SECRET: z.string().min(20),
+  JWT_REFRESH_TOKEN_LIFETIME: z.string().default("7d"),
+});
 
-export function validate(config: Record<string, unknown>) {
-  const validatedConfig = plainToInstance(AppConfig, config, {
-    enableImplicitConversion: true,
-  });
-  const errors = validateSync(validatedConfig, {
-    skipMissingProperties: false,
-  });
-
-  if (errors.length > 0) throw new Error(errors.toString());
-  return validatedConfig;
-}
+export type AppConfig = z.infer<typeof AppConfigSchema>;
