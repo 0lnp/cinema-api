@@ -17,7 +17,7 @@ import { TokenGenerator } from "src/domain/ports/token_generator";
 import { RefreshToken, TokenStatus } from "src/domain/aggregates/refresh_token";
 import { RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
 
-export class UserLoginService {
+export class UserLoginApplicationService {
   public constructor(
     @Inject(UserRepository.name)
     private readonly userRepository: UserRepository,

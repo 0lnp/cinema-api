@@ -1,5 +1,9 @@
 import { type BaseSuccessfulResponse } from "src/shared/types/base_successful_response";
-import { type LoginBodyDTO, type RegisterBodyDTO } from "../dtos/auth_dto";
+import {
+  RefreshBodyDTO,
+  type LoginBodyDTO,
+  type RegisterBodyDTO,
+} from "../dtos/auth_dto";
 import {
   type UserRegisterDTO,
   type UserRegisterResult,
@@ -8,12 +12,21 @@ import {
   type UserLoginDTO,
   type UserLoginResult,
 } from "src/application/dtos/user_login_dto";
+import {
+  RefreshTokenDTO,
+  RefreshTokenResult,
+} from "src/application/dtos/refresh_token_dto";
 
 export interface RegisterResponse {
   user_id: string;
 }
 
 export interface LoginResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
+export interface RefreshResponse {
   access_token: string;
   refresh_token: string;
 }
@@ -48,6 +61,24 @@ export class AuthMapper {
   public static toLoginResponse(
     result: UserLoginResult,
   ): BaseSuccessfulResponse<LoginResponse> {
+    return {
+      message: result.message,
+      data: {
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+      },
+    };
+  }
+
+  public static toRefreshRequest(body: RefreshBodyDTO): RefreshTokenDTO {
+    return {
+      refreshToken: body.refresh_token,
+    };
+  }
+
+  public static toRefreshResponse(
+    result: RefreshTokenResult,
+  ): BaseSuccessfulResponse<RefreshResponse> {
     return {
       message: result.message,
       data: {

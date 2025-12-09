@@ -11,7 +11,6 @@ type RefreshTokenIssueProps = Omit<ClassProps<RefreshToken>, "issuedAt">;
 export enum TokenStatus {
   ACTIVE = "ACTIVE",
   ROTATED = "ROTATED",
-  REVOKED = "REVOKED",
 }
 
 export class RefreshToken {
@@ -49,7 +48,7 @@ export class RefreshToken {
     return token;
   }
 
-  public rotate(props: RefreshTokenIssueProps): RefreshToken {
+  public rotate() {
     if (this.status !== TokenStatus.ACTIVE) {
       throw new InvariantError({
         code: InvariantErrorCode.ROTATION_NOT_PERMITTED,
@@ -65,28 +64,6 @@ export class RefreshToken {
     }
 
     this._status = TokenStatus.ROTATED;
-
-    const newToken = RefreshToken.issue({
-      id: props.id,
-      userID: this.userID,
-      tokenHash: this.tokenHash,
-      tokenFamily: this.tokenFamily,
-      status: TokenStatus.ACTIVE,
-      expiresAt: props.expiresAt,
-    });
-
-    return newToken;
-  }
-
-  public revoke(): void {
-    if (this.status !== TokenStatus.ACTIVE) {
-      throw new InvariantError({
-        code: InvariantErrorCode.REVOCATION_NOT_PERMITTED,
-        message: "Cannot revoke inactive token",
-      });
-    }
-
-    this._status = TokenStatus.REVOKED;
   }
 
   public get status(): TokenStatus {

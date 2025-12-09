@@ -1,16 +1,23 @@
 import { Body, Controller, Inject, Post } from "@nestjs/common";
-import { type LoginBodyDTO, type RegisterBodyDTO } from "../dtos/auth_dto";
+import {
+  RefreshBodyDTO,
+  type LoginBodyDTO,
+  type RegisterBodyDTO,
+} from "../dtos/auth_dto";
 import { AuthMapper } from "../mappers/auth_mapper";
-import { UserRegisterService } from "src/application/services/user_register_service";
-import { UserLoginService } from "src/application/services/user_login_service";
+import { UserRegisterApplicationService } from "src/application/services/user_register_application_service";
+import { UserLoginApplicationService } from "src/application/services/user_login_application_service";
+import { RefreshTokenApplicationService } from "src/application/services/refresh_token_application_service";
 
 @Controller("auth")
 export class AuthController {
   public constructor(
-    @Inject(UserRegisterService.name)
-    private readonly userRegisterService: UserRegisterService,
-    @Inject(UserLoginService.name)
-    private readonly userLoginService: UserLoginService,
+    @Inject(UserRegisterApplicationService.name)
+    private readonly userRegisterService: UserRegisterApplicationService,
+    @Inject(UserLoginApplicationService.name)
+    private readonly userLoginService: UserLoginApplicationService,
+    @Inject(RefreshTokenApplicationService.name)
+    private readonly refreshTokenService: RefreshTokenApplicationService,
   ) {}
 
   @Post("register")
@@ -25,5 +32,12 @@ export class AuthController {
     const request = AuthMapper.toLoginRequest(body);
     const result = await this.userLoginService.execute(request);
     return AuthMapper.toLoginResponse(result);
+  }
+
+  @Post("refresh")
+  async postAuthRefresh(@Body() body: RefreshBodyDTO) {
+    const request = AuthMapper.toRefreshRequest(body);
+    const result = await this.refreshTokenService.execute(request);
+    return AuthMapper.toRefreshResponse(result);
   }
 }

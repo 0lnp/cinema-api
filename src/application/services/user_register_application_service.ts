@@ -15,7 +15,7 @@ import { RoleName } from "src/domain/value_objects/system_roles";
 import { Inject } from "@nestjs/common";
 import { PasswordHasher } from "src/domain/ports/password_hasher";
 
-export class UserRegisterService {
+export class UserRegisterApplicationService {
   public constructor(
     @Inject(UserRepository.name)
     private readonly userRepository: UserRepository,

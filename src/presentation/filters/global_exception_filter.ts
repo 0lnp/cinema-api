@@ -108,6 +108,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             status: HttpStatus.CONFLICT,
             message: exception.message,
           };
+        case ApplicationErrorCode.INVALID_JWT_TOKEN:
+        case ApplicationErrorCode.JWT_EXPIRED:
+        case ApplicationErrorCode.TOKEN_REUSE_DETECTED:
+        case ApplicationErrorCode.INVALID_REFRESH_TOKEN:
+          return {
+            status: HttpStatus.UNAUTHORIZED,
+            message: exception.message,
+          };
         default:
           return internalServerError;
       }

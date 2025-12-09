@@ -1,21 +1,31 @@
 import { Module } from "@nestjs/common";
 import { RepositoryModule } from "./repository_module";
 import { PortsModule } from "./ports_module";
-import { UserRegisterService } from "src/application/services/user_register_service";
-import { UserLoginService } from "src/application/services/user_login_service";
+import { UserRegisterApplicationService } from "src/application/services/user_register_application_service";
+import { UserLoginApplicationService } from "src/application/services/user_login_application_service";
+import { RefreshTokenApplicationService } from "src/application/services/refresh_token_application_service";
+import { DomainServiceModule } from "./domain_service_module";
 
 @Module({
-  imports: [RepositoryModule, PortsModule],
+  imports: [RepositoryModule, PortsModule, DomainServiceModule],
   providers: [
     {
-      provide: UserRegisterService.name,
-      useClass: UserRegisterService,
+      provide: UserRegisterApplicationService.name,
+      useClass: UserRegisterApplicationService,
     },
     {
-      provide: UserLoginService.name,
-      useClass: UserLoginService,
+      provide: UserLoginApplicationService.name,
+      useClass: UserLoginApplicationService,
+    },
+    {
+      provide: RefreshTokenApplicationService.name,
+      useClass: RefreshTokenApplicationService,
     },
   ],
-  exports: [UserRegisterService.name, UserLoginService.name],
+  exports: [
+    UserRegisterApplicationService.name,
+    UserLoginApplicationService.name,
+    RefreshTokenApplicationService.name,
+  ],
 })
 export class ApplicationServiceModule {}
