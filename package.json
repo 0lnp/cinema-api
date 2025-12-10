@@ -9,6 +9,7 @@
     "start:prod": "node .",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.json",
     "test:cov": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.json --coverage",
+    "migration:generate": "dotenvx run -- typeorm-ts-node-commonjs migration:generate -d src/infrastructure/databases/typeorm_data_source",
     "migration:run": "dotenvx run -- typeorm-ts-node-commonjs migration:run -d src/infrastructure/databases/typeorm_data_source",
     "migration:revert": "dotenvx run -- typeorm-ts-node-commonjs migration:revert -d src/infrastructure/databases/typeorm_data_source"
   },
