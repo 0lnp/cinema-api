@@ -3,5 +3,5 @@ type NonFunctionPropertyNames<T> = {
 }[keyof T];
 
 export type ORMEntity<T extends Record<string, any>> = {
-  [K in NonFunctionPropertyNames<T>]: string | number | Date | null;
+  [K in NonFunctionPropertyNames<T>]: any;
 };

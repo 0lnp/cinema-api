@@ -4,10 +4,12 @@ import { PortModule } from "./port_module";
 import { UserRegisterApplicationService } from "src/application/services/user_register_application_service";
 import { UserLoginApplicationService } from "src/application/services/user_login_application_service";
 import { RefreshTokenApplicationService } from "src/application/services/refresh_token_application_service";
+import { DomainServiceModule } from "./domain_service_module";
+import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
 
 @Module({
-  imports: [RepositoryModule, PortModule],
+  imports: [RepositoryModule, PortModule, DomainServiceModule],
   providers: [
     {
       provide: UserRegisterApplicationService.name,
@@ -25,11 +27,16 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
       provide: UserLogoutApplicationService.name,
       useClass: UserLogoutApplicationService,
     },
+    {
+      provide: ScreenApplicationService.name,
+      useClass: ScreenApplicationService,
+    },
   ],
   exports: [
     UserRegisterApplicationService.name,
     UserLoginApplicationService.name,
     RefreshTokenApplicationService.name,
+    ScreenApplicationService.name,
     UserLogoutApplicationService.name,
   ],
 })

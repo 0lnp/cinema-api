@@ -3,6 +3,7 @@ import { type AppConfig } from "../configs/app_config";
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { UserORMEntity } from "./orm_entities/user_orm_entity";
 import { RefreshTokenORMEntity } from "./orm_entities/refresh_token_orm_entity";
+import { ScreenORMEntity } from "./orm_entities/screen_orm_entity";
 
 export const typeORMDataSourceOptions = (
   config: ConfigService<AppConfig, true>,
@@ -13,7 +14,7 @@ export const typeORMDataSourceOptions = (
   username: config.get("DATABASE_USER", { infer: true }),
   password: config.get("DATABASE_PASSWORD", { infer: true }),
   database: config.get("DATABASE_NAME", { infer: true }),
-  entities: [UserORMEntity, RefreshTokenORMEntity],
+  entities: [UserORMEntity, RefreshTokenORMEntity, ScreenORMEntity],
 });
 
 export default new DataSource({
@@ -23,7 +24,7 @@ export default new DataSource({
   username: process.env.DATABASE_USER || "postgres",
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE_NAME || "cinema_db",
-  entities: [UserORMEntity, RefreshTokenORMEntity],
+  entities: [UserORMEntity, RefreshTokenORMEntity, ScreenORMEntity],
   migrations: ["migrations/*.ts"],
   synchronize: false,
 });
