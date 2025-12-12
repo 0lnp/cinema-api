@@ -3,6 +3,7 @@ export enum PermissionResource {
   MOVIE = "MOVIE",
   SHOWTIME = "SHOWTIME",
   BOOKING = "BOOKING",
+  SCREEN = "SCREEN",
 }
 
 export enum PermissionAction {
@@ -23,22 +24,5 @@ export class Permission {
     const isSameResource = this.resource === other.resource;
     if (isSameAction && isSameResource) return true;
     return false;
-  }
-
-  public toString(): string {
-    const normalizedAction = this.action.toLowerCase();
-    const normalizedResource = this.resource.toLowerCase();
-    return `${normalizedAction}:${normalizedResource}`;
-  }
-
-  public static fromString(permissionString: string): Permission {
-    const [action, resource] = permissionString.split(":");
-    if (!action?.trim().length || !resource?.trim().length) {
-      throw new Error("Invalid permission string");
-    }
-
-    const normalizedAction = action.toUpperCase() as PermissionAction;
-    const normalizedResource = resource.toUpperCase() as PermissionResource;
-    return new Permission(normalizedAction, normalizedResource);
   }
 }

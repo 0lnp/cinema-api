@@ -4,7 +4,7 @@ export class UserID {
   public constructor(public readonly value: string) {}
 
   public static generate(): UserID {
-    const id = `user_${randomUUID()}`;
+    const id = `USR_${randomUUID()}`;
     return new UserID(id);
   }
 
