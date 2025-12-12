@@ -38,9 +38,8 @@ export class User {
     });
   }
 
-  public hasPermission(user: User, permissionString: string): boolean {
-    const permission = Permission.fromString(permissionString);
-    const rolePermissions = SystemRoles.rolePermissions(user.roleName);
+  public hasPermission(permission: Permission): boolean {
+    const rolePermissions = SystemRoles.rolePermissions(this.roleName);
     return rolePermissions.some((rp) => rp.implies(permission));
   }
 

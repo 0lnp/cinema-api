@@ -116,6 +116,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             status: HttpStatus.UNAUTHORIZED,
             message: exception.message,
           };
+        case ApplicationErrorCode.SCREEN_NOT_FOUND:
+          return {
+            status: HttpStatus.NOT_FOUND,
+            message: exception.message,
+          };
         default:
           return internalServerError;
       }

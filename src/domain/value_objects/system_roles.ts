@@ -31,6 +31,7 @@ export class SystemRoles {
       ...boxOfficeStaffPermissions,
       new Permission(PermissionAction.MANAGE, PermissionResource.MOVIE),
       new Permission(PermissionAction.MANAGE, PermissionResource.SHOWTIME),
+      new Permission(PermissionAction.MANAGE, PermissionResource.SCREEN),
     ];
 
     const adminPermissions: NonEmptyArray<Permission> = [

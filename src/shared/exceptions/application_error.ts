@@ -8,6 +8,7 @@ export enum ApplicationErrorCode {
   TOKEN_REUSE_DETECTED = "TOKEN_REUSE_DETECTED",
   INVALID_REFRESH_TOKEN = "INVALID_REFRESH_TOKEN",
   EXPIRED_JWT_TOKEN = "EXPIRED_JWT_TOKEN",
+  SCREEN_NOT_FOUND = "SCREEN_NOT_FOUND",
 }
 
 export class ApplicationError extends Error {

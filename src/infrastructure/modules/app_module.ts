@@ -1,9 +1,10 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AppConfigSchema } from "../configs/app_config";
 import { APP_FILTER } from "@nestjs/core";
 import { ControllerModule } from "./controller_module";
 import { GlobalExceptionFilter } from "../http/filters/global_exception_filter";
+import { RequestLoggerMiddleware } from "../http/middlewares/request_logger_middleware";
 
 @Module({
   imports: [
@@ -22,4 +23,8 @@ import { GlobalExceptionFilter } from "../http/filters/global_exception_filter";
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  public configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes("/");
+  }
+}
