@@ -1,10 +1,12 @@
-import { createClientPool } from "redis";
 import { TokenBlacklistManager } from "src/domain/ports/token_blacklist_manager";
 import { UserID } from "src/domain/value_objects/user_id";
+import { RedisClient } from "../instances/redis_client";
+import { Inject } from "@nestjs/common";
 
 export class RedisTokenBlacklistManager extends TokenBlacklistManager {
   public constructor(
-    private readonly redisPool: ReturnType<typeof createClientPool>,
+    @Inject(RedisClient.name)
+    private readonly redisClient: RedisClient,
   ) {
     super();
   }
@@ -20,18 +22,11 @@ export class RedisTokenBlacklistManager extends TokenBlacklistManager {
     const expiresAtSeconds = Math.floor(expiresAt.getTime() / 1000);
     const ttlSeconds = expiresAtSeconds - nowInSeconds;
 
-    await this.redisPool.set(key, userID.value, {
-      expiration: {
-        type: "EX",
-        value: ttlSeconds,
-      },
-    });
+    await this.redisClient.set(key, userID.value, ttlSeconds);
   }
 
   public async isBlacklisted(tokenHash: string): Promise<boolean> {
     const key = TokenBlacklistManager.TOKEN_PREFIX + tokenHash;
-
-    const result = await this.redisPool.exists(key);
-    return result === 1;
+    return await this.redisClient.exists(key);
   }
 }

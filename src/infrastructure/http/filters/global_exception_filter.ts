@@ -5,12 +5,15 @@ import {
   HttpException,
   HttpStatus,
   InternalServerErrorException,
+  Logger,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
+import { Request } from "express";
 import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
+import { InfrastructureError } from "src/shared/exceptions/infrastructure_error";
 import {
   InvariantError,
   InvariantErrorCode,
@@ -18,6 +21,8 @@ import {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger("ExceptionHandler");
+
   public constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   public catch(exception: unknown, host: ArgumentsHost): void {
@@ -30,6 +35,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message,
       errors,
     } = this.mapException(exception);
+
+    if (statusCode === HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logServerError(exception, request, statusCode);
+    }
 
     const responseBody = {
       message,
@@ -149,5 +158,51 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status,
       message: typeof response === "string" ? response : exception.message,
     };
+  }
+
+  private logServerError(
+    exception: unknown,
+    request: Request,
+    status: number,
+  ): void {
+    const errorDetails = {
+      event: "SERVER_ERROR",
+      statusCode: status,
+      path: request.url,
+      method: request.method,
+      requestId: request.requestID,
+      token: request.headers.authorization,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (exception instanceof InfrastructureError) {
+      this.logger.error(
+        {
+          ...errorDetails,
+          message: exception.message,
+          code: exception.code,
+        },
+        exception.stack,
+      );
+      return;
+    }
+
+    if (exception instanceof Error) {
+      this.logger.error(
+        {
+          ...errorDetails,
+          message: exception.message,
+          errorName: exception.name,
+        },
+        exception.stack,
+      );
+      return;
+    }
+
+    this.logger.error({
+      ...errorDetails,
+      message: "Unknown error type",
+      exception: String(exception),
+    });
   }
 }
