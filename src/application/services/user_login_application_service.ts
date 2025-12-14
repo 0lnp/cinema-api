@@ -14,7 +14,7 @@ import {
 import { PasswordHasher } from "src/domain/ports/password_hasher";
 import { TokenHasher } from "src/domain/ports/token_hasher";
 import { TokenGenerator } from "src/domain/ports/token_generator";
-import { RefreshToken, TokenStatus } from "src/domain/aggregates/refresh_token";
+import { RefreshToken } from "src/domain/aggregates/refresh_token";
 import { RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
 
 export class UserLoginApplicationService {
@@ -75,7 +75,6 @@ export class UserLoginApplicationService {
       userID: user.id,
       tokenHash: refreshTokenHash,
       tokenFamily: refreshTokenFamily,
-      status: TokenStatus.ACTIVE,
       expiresAt: refreshTokenExpiresAt,
     });
 

@@ -1,10 +1,11 @@
 import { Inject } from "@nestjs/common";
-import { RefreshToken, TokenStatus } from "../aggregates/refresh_token";
+import { RefreshToken } from "../aggregates/refresh_token";
 import { RefreshTokenRepository } from "../repositories/refresh_token_repository";
 import { TokenHasher } from "../ports/token_hasher";
 import { TokenGenerator } from "../ports/token_generator";
 import { UserRepository } from "../repositories/user_repository";
 import { TokenID } from "../value_objects/token_id";
+import { TokenStatus } from "../value_objects/token_status";
 
 type TokenRotationSuccess = {
   success: true;
@@ -93,7 +94,6 @@ export class TokenManagementService {
       userID: token.userID,
       tokenHash: newTokenHash,
       tokenFamily: token.tokenFamily,
-      status: TokenStatus.ACTIVE,
       expiresAt: newTokenExpiresAt,
     });
 
