@@ -1,5 +1,5 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { RefreshToken, TokenStatus } from "src/domain/aggregates/refresh_token";
+import { RefreshToken } from "src/domain/aggregates/refresh_token";
 import { type RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
 import { TokenID } from "src/domain/value_objects/token_id";
 import {
@@ -9,6 +9,7 @@ import {
 import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_orm_entity";
 import { Repository } from "typeorm";
 import { UserID } from "src/domain/value_objects/user_id";
+import { TokenStatus } from "src/domain/value_objects/token_status";
 
 export class TypeORMRefreshTokenRepository implements RefreshTokenRepository {
   public constructor(
