@@ -126,6 +126,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             message: exception.message,
           };
         case ApplicationErrorCode.SCREEN_NOT_FOUND:
+        case ApplicationErrorCode.MOVIE_NOT_FOUND:
           return {
             status: HttpStatus.NOT_FOUND,
             message: exception.message,

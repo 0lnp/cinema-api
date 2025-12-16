@@ -7,9 +7,11 @@ import { RefreshTokenApplicationService } from "src/application/services/refresh
 import { DomainServiceModule } from "./domain_service_module";
 import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
+import { MovieApplicationService } from "src/application/services/movie_application_service";
+import { ProviderModule } from "./provider_module";
 
 @Module({
-  imports: [RepositoryModule, PortModule, DomainServiceModule],
+  imports: [RepositoryModule, PortModule, DomainServiceModule, ProviderModule],
   providers: [
     {
       provide: UserRegisterApplicationService.name,
@@ -31,6 +33,10 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
       provide: ScreenApplicationService.name,
       useClass: ScreenApplicationService,
     },
+    {
+      provide: MovieApplicationService.name,
+      useClass: MovieApplicationService,
+    },
   ],
   exports: [
     UserRegisterApplicationService.name,
@@ -38,6 +44,7 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
     RefreshTokenApplicationService.name,
     ScreenApplicationService.name,
     UserLogoutApplicationService.name,
+    MovieApplicationService.name,
   ],
 })
 export class ApplicationServiceModule {}

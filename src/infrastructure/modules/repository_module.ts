@@ -12,6 +12,9 @@ import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_o
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import { TypeORMScreenRepository } from "../persistences/typeorm_screen_repository";
 import { ScreenORMEntity } from "../databases/orm_entities/screen_orm_entity";
+import { MovieRepository } from "src/domain/repositories/movie_repository";
+import { TypeormMovieRepository } from "../persistences/typeorm_movie_repository";
+import { MovieORMEntity } from "../databases/orm_entities/movie_orm_entity";
 
 @Module({
   imports: [
@@ -26,6 +29,7 @@ import { ScreenORMEntity } from "../databases/orm_entities/screen_orm_entity";
       UserORMEntity,
       RefreshTokenORMEntity,
       ScreenORMEntity,
+      MovieORMEntity,
     ]),
   ],
   providers: [
@@ -41,11 +45,16 @@ import { ScreenORMEntity } from "../databases/orm_entities/screen_orm_entity";
       provide: ScreenRepository.name,
       useClass: TypeORMScreenRepository,
     },
+    {
+      provide: MovieRepository.name,
+      useClass: TypeormMovieRepository,
+    },
   ],
   exports: [
     UserRepository.name,
     RefreshTokenRepository.name,
     ScreenRepository.name,
+    MovieRepository.name,
   ],
 })
 export class RepositoryModule {}
