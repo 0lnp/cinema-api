@@ -8,6 +8,7 @@ import { DomainServiceModule } from "./domain_service_module";
 import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
 import { MovieApplicationService } from "src/application/services/movie_application_service";
+import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
 import { ProviderModule } from "./provider_module";
 
 @Module({
@@ -37,6 +38,10 @@ import { ProviderModule } from "./provider_module";
       provide: MovieApplicationService.name,
       useClass: MovieApplicationService,
     },
+    {
+      provide: ShowtimeApplicationService.name,
+      useClass: ShowtimeApplicationService,
+    },
   ],
   exports: [
     UserRegisterApplicationService.name,
@@ -45,6 +50,7 @@ import { ProviderModule } from "./provider_module";
     ScreenApplicationService.name,
     UserLogoutApplicationService.name,
     MovieApplicationService.name,
+    ShowtimeApplicationService.name,
   ],
 })
 export class ApplicationServiceModule {}

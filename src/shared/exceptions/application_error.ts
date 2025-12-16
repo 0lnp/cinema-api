@@ -10,6 +10,9 @@ export enum ApplicationErrorCode {
   EXPIRED_JWT_TOKEN = "EXPIRED_JWT_TOKEN",
   SCREEN_NOT_FOUND = "SCREEN_NOT_FOUND",
   MOVIE_NOT_FOUND = "MOVIE_NOT_FOUND",
+  SHOWTIME_CONFLICT = "SHOWTIME_CONFLICT",
+  SHOWTIME_NOT_FOUND = "SHOWTIME_NOT_FOUND",
+  INVALID_INPUT = "INVALID_INPUT",
 }
 
 export class ApplicationError extends Error {
@@ -19,7 +22,7 @@ export class ApplicationError extends Error {
   constructor(props: BaseErrorProps<ApplicationError>) {
     super(props.message);
     this.code = props.code;
-    this.details = props.details || {};
+    this.details = props.details;
     this.name = this.constructor.name;
   }
 }

@@ -60,7 +60,9 @@ export class TMDBMovieProvider implements MovieProvider {
     results: MovieSearchResult[];
     resultCount: number;
   }> {
-    const url = `${this.tmdbConfig.apiBaseUrl}/search/movie?query=${encodeURIComponent(keyword)}`;
+    const url = `${
+      this.tmdbConfig.apiBaseUrl
+    }/search/movie?query=${encodeURIComponent(keyword)}`;
     const response = await this.executeWithLogging(
       {
         operation: "searchMovie",
@@ -87,6 +89,7 @@ export class TMDBMovieProvider implements MovieProvider {
         throw new InfrastructureError({
           code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
           message: `TMDB API returned invalid data for searchMovie with keyword "${keyword}": ${error.message}`,
+          details: error.details,
         });
       }
 
@@ -95,7 +98,9 @@ export class TMDBMovieProvider implements MovieProvider {
   }
 
   public async movieOfID(externalID: string): Promise<ExternalMovie | null> {
-    const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(externalID)}`;
+    const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(
+      externalID,
+    )}`;
     const response = await this.executeWithLogging(
       {
         operation: "movieOfID",
@@ -122,6 +127,7 @@ export class TMDBMovieProvider implements MovieProvider {
         throw new InfrastructureError({
           code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
           message: `TMDB API returned invalid data for movieOfID with ID ${externalID}: ${error.message}`,
+          details: error.details,
         });
       }
 
@@ -130,7 +136,9 @@ export class TMDBMovieProvider implements MovieProvider {
   }
 
   public async certificate(externalID: string): Promise<string | null> {
-    const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(externalID)}/release_dates`;
+    const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(
+      externalID,
+    )}/release_dates`;
     const response = await this.executeWithLogging(
       {
         operation: "certifcate",
@@ -160,6 +168,7 @@ export class TMDBMovieProvider implements MovieProvider {
         throw new InfrastructureError({
           code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
           message: `TMDB API returned invalid data for certificate with ID ${externalID}: ${error.message}`,
+          details: error.details,
         });
       }
 
@@ -195,7 +204,9 @@ export class TMDBMovieProvider implements MovieProvider {
 
       throw new InfrastructureError({
         code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
-        message: `TMDB API request failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `TMDB API request failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         stack: error instanceof Error ? error.stack : undefined,
       });
     } finally {
@@ -208,7 +219,9 @@ export class TMDBMovieProvider implements MovieProvider {
     operation: string,
     params: object,
   ): Promise<never> {
-    let errorMessage = `TMDB API error during ${operation} with props "${JSON.stringify(params)}"`;
+    let errorMessage = `TMDB API error during ${operation} with props "${JSON.stringify(
+      params,
+    )}"`;
 
     try {
       const errorData = (await response.json()) as TMDBErrorResponse;
@@ -238,7 +251,7 @@ export class TMDBMovieProvider implements MovieProvider {
         title: movie.title,
         synopsis: movie.overview,
         releaseYear: releaseYear,
-        posterPath: movie.poster_path,
+        posterPath: movie.poster_path ?? "",
       };
     });
   }
@@ -255,7 +268,7 @@ export class TMDBMovieProvider implements MovieProvider {
       durationMinutes: data.runtime,
       genres: data.genres.map((genre) => genre.name),
       releaseYear: releaseYear,
-      posterPath: data.poster_path,
+      posterPath: data.poster_path ?? "",
     };
   }
 
