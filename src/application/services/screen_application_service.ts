@@ -18,7 +18,7 @@ import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
-import { ReplaceField } from "src/shared/types/replace_field";
+import { ReplaceFields } from "src/shared/types/replace_fields";
 
 export class ScreenApplicationService {
   public constructor(
@@ -60,7 +60,7 @@ export class ScreenApplicationService {
   }
 
   public async setLayout(
-    request: ReplaceField<SetScreenLayoutDTO, "screenID", string>,
+    request: ReplaceFields<SetScreenLayoutDTO, { screenID: string }>,
   ): Promise<SetScreenLayoutResult> {
     const dto = validate(SetScreenLayoutDTOSchema, request);
 
@@ -95,7 +95,7 @@ export class ScreenApplicationService {
   }
 
   public async deleteScreen(
-    request: ReplaceField<DeleteScreenDTO, "screenID", string>,
+    request: ReplaceFields<DeleteScreenDTO, { screenID: string}>,
   ): Promise<DeleteScreenResult> {
     const dto = validate(DeleteScreenDTOSchema, request);
 

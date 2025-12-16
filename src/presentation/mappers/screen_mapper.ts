@@ -11,7 +11,7 @@ import {
   SetScreenLayoutDTO,
   SetScreenLayoutResult,
 } from "src/application/dtos/screen_dto";
-import { ReplaceField } from "src/shared/types/replace_field";
+import { ReplaceFields } from "src/shared/types/replace_fields";
 
 export interface CreateResponse {
   id: string;
@@ -69,10 +69,12 @@ export class ScreenMapper {
     };
   }
 
+  
+
   public static toSetLayoutRequest(
     params: PatchScreenIDParamsDTO,
     body: PatchScreenIDBodyDTO,
-  ): ReplaceField<SetScreenLayoutDTO, "screenID", string> {
+  ): ReplaceFields<SetScreenLayoutDTO, { screenID: string }> {
     return {
       screenID: params.screen_id,
       rows: body.rows.map((row) => ({
