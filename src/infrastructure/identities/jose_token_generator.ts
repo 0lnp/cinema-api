@@ -15,6 +15,7 @@ import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
+import { capitalize } from "src/shared/utilities/capitalize";
 
 export class JoseTokenGenerator implements TokenGenerator {
   public constructor(
@@ -67,10 +68,18 @@ export class JoseTokenGenerator implements TokenGenerator {
       const { payload } = await jwtVerify<ClaimsForType<T>>(token, secret);
       return payload;
     } catch (error) {
-      if (error instanceof errors.JWSSignatureVerificationFailed) {
+      if (
+        error instanceof errors.JWSInvalid ||
+        error instanceof errors.JWSSignatureVerificationFailed
+      ) {
         throw new ApplicationError({
           code: ApplicationErrorCode.INVALID_JWT_TOKEN,
           message: `Invalid ${tokenType} token`,
+        });
+      } else if (error instanceof errors.JWTExpired) {
+        throw new ApplicationError({
+          code: ApplicationErrorCode.EXPIRED_JWT_TOKEN,
+          message: `${capitalize(tokenType)} token has expired`,
         });
       } else {
         throw new InfrastructureError({

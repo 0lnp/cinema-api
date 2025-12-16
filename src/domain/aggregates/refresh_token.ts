@@ -5,13 +5,12 @@ import {
   InvariantError,
   InvariantErrorCode,
 } from "src/shared/exceptions/invariant_error";
+import { TokenStatus } from "../value_objects/token_status";
 
-type RefreshTokenIssueProps = Omit<ClassProps<RefreshToken>, "issuedAt">;
-
-export enum TokenStatus {
-  ACTIVE = "ACTIVE",
-  ROTATED = "ROTATED",
-}
+type RefreshTokenIssueProps = Omit<
+  ClassProps<RefreshToken>,
+  "status" | "issuedAt"
+>;
 
 export class RefreshToken {
   public readonly id: TokenID;
@@ -33,15 +32,13 @@ export class RefreshToken {
   }
 
   public static issue(props: RefreshTokenIssueProps): RefreshToken {
-    const now = new Date();
-
     const token = new RefreshToken({
       id: props.id,
       userID: props.userID,
       tokenHash: props.tokenHash,
       tokenFamily: props.tokenFamily,
       status: TokenStatus.ACTIVE,
-      issuedAt: now,
+      issuedAt: new Date(),
       expiresAt: props.expiresAt,
     });
 

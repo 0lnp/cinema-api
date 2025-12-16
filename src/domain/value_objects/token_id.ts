@@ -4,7 +4,7 @@ export class TokenID {
   public constructor(public readonly value: string) {}
 
   public static generate(): TokenID {
-    const id = `token_${randomUUID()}`;
+    const id = `TKN_${randomUUID()}`;
     return new TokenID(id);
   }
 

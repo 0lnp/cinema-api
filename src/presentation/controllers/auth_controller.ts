@@ -1,4 +1,11 @@
-import { Body, Controller, Inject, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Inject,
+  Post,
+  Request,
+  UseGuards,
+} from "@nestjs/common";
 import {
   RefreshBodyDTO,
   type LoginBodyDTO,
@@ -8,6 +15,9 @@ import { AuthMapper } from "../mappers/auth_mapper";
 import { UserRegisterApplicationService } from "src/application/services/user_register_application_service";
 import { UserLoginApplicationService } from "src/application/services/user_login_application_service";
 import { RefreshTokenApplicationService } from "src/application/services/refresh_token_application_service";
+import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
+import { AuthGuard } from "../guards/auth_guard";
+import { type Request as TRequest } from "express";
 
 @Controller("auth")
 export class AuthController {
@@ -18,6 +28,8 @@ export class AuthController {
     private readonly userLoginService: UserLoginApplicationService,
     @Inject(RefreshTokenApplicationService.name)
     private readonly refreshTokenService: RefreshTokenApplicationService,
+    @Inject(UserLogoutApplicationService.name)
+    private readonly userLogoutService: UserLogoutApplicationService,
   ) {}
 
   @Post("register")
@@ -39,5 +51,15 @@ export class AuthController {
     const request = AuthMapper.toRefreshRequest(body);
     const result = await this.refreshTokenService.execute(request);
     return AuthMapper.toRefreshResponse(result);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post("logout")
+  async postAuthLogout(@Request() req: TRequest) {
+    const result = await this.userLogoutService.execute({
+      userID: req.user.id,
+      accessToken: req.accessToken,
+    });
+    return result;
   }
 }
