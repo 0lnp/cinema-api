@@ -143,10 +143,7 @@ export class ShowtimeApplicationService {
     ]);
     if (movie === null || screen === null) {
       throw new ApplicationError({
-        code:
-          movie === null
-            ? ApplicationErrorCode.RESOURCE_NOT_FOUND
-            : ApplicationErrorCode.RESOURCE_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: movie === null ? "Movie not found" : "Screen not found",
       });
     }

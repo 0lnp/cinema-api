@@ -23,7 +23,9 @@ export const CreateShowtimeDTOSchema = z.object({
       error: "Invalid screen ID format",
     })
     .transform((value) => new ScreenID(value)),
-  startTime: z.date(),
+  startTime: z.date().refine((date) => date.getTime() > Date.now(), {
+    error: "Start time must be in the future",
+  }),
   pricing: z.number().min(0),
 });
 
