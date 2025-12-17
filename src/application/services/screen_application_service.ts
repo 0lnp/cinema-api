@@ -67,7 +67,7 @@ export class ScreenApplicationService {
     const screen = await this.screenRepository.screenOfID(dto.screenID);
     if (screen === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.SCREEN_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Screen with ID "${dto.screenID.value}" not found`,
       });
     }
@@ -95,14 +95,14 @@ export class ScreenApplicationService {
   }
 
   public async deleteScreen(
-    request: ReplaceFields<DeleteScreenDTO, { screenID: string}>,
+    request: ReplaceFields<DeleteScreenDTO, { screenID: string }>,
   ): Promise<DeleteScreenResult> {
     const dto = validate(DeleteScreenDTOSchema, request);
 
     const screen = await this.screenRepository.screenOfID(dto.screenID);
     if (screen === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.SCREEN_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Screen with ID "${dto.screenID.value}" not found`,
       });
     }

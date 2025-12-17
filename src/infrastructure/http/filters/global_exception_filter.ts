@@ -127,9 +127,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             status: HttpStatus.UNAUTHORIZED,
             message: exception.message,
           };
-        case ApplicationErrorCode.SCREEN_NOT_FOUND:
-        case ApplicationErrorCode.MOVIE_NOT_FOUND:
-        case ApplicationErrorCode.SHOWTIME_NOT_FOUND:
+        case ApplicationErrorCode.RESOURCE_NOT_FOUND:
           return {
             status: HttpStatus.NOT_FOUND,
             message: exception.message,

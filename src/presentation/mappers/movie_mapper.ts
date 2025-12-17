@@ -4,6 +4,7 @@ import {
   CreateMovieDTO,
   CreateMovieResult,
   DeleteMovieResult,
+  GetAllMoviesResult,
   SearchFromExternalResult,
 } from "src/application/dtos/movie_dto";
 import {
@@ -20,7 +21,28 @@ export interface CreateResponse {
   created_at: string;
 }
 
-export interface SearchResponse {
+export interface MovieListItemResponse {
+  id: string;
+  title: string;
+  synopsis: string;
+  duration: string;
+  genres: string[];
+  certificate: string;
+  release_year: number;
+  poster_url: string;
+  status: string;
+  created_at: string;
+}
+
+export interface GetAllMoviesResponse {
+  items: MovieListItemResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface SearchExternalResponse {
   results: Array<{
     external_id: string;
     title: string;
@@ -68,9 +90,34 @@ export class MovieMapper {
     };
   }
 
-  public static toSearchResponse(
+  public static toGetAllResponse(
+    result: GetAllMoviesResult,
+  ): BaseSuccessfulResponse<GetAllMoviesResponse> {
+    return {
+      data: {
+        items: result.items.map((movie) => ({
+          id: movie.id,
+          title: movie.title,
+          synopsis: movie.synopsis,
+          duration: movie.duration,
+          genres: movie.genres,
+          certificate: movie.certificate,
+          release_year: movie.releaseYear,
+          poster_url: movie.posterURL,
+          status: movie.status,
+          created_at: movie.createdAt.toISOString(),
+        })),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        total_pages: result.totalPages,
+      },
+    };
+  }
+
+  public static toSearchExternalResponse(
     result: SearchFromExternalResult,
-  ): BaseSuccessfulResponse<SearchResponse> {
+  ): BaseSuccessfulResponse<SearchExternalResponse> {
     return {
       data: {
         results: result.results.map((movie) => ({

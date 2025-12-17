@@ -1,7 +1,6 @@
 import { type BaseSuccessfulResponse } from "src/shared/types/base_successful_response";
 import {
   GetShowtimeParamsDTO,
-  GetShowtimesQueryDTO,
   PatchShowtimeBodyDTO,
   PatchShowtimeParamsDTO,
   PostShowtimeBodyDTO,
@@ -10,7 +9,6 @@ import {
   CreateShowtimeDTO,
   CreateShowtimeResult,
   DeleteShowtimeResult,
-  GetAllShowtimesDTO,
   GetAllShowtimesResult,
   GetShowtimeDTO,
   GetShowtimeResult,
@@ -44,7 +42,7 @@ export interface GetResponse {
 }
 
 export interface GetAllResponse {
-  showtimes: Array<{
+  items: Array<{
     id: string;
     movie_id: string;
     movie_title: string;
@@ -55,7 +53,10 @@ export interface GetAllResponse {
     pricing: number;
     status: string;
   }>;
-  result_count: number;
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
 }
 
 export interface UpdateResponse {
@@ -128,21 +129,12 @@ export class ShowtimeMapper {
     };
   }
 
-  public static toGetAllRequest(
-    query: GetShowtimesQueryDTO,
-  ): ReplaceFields<GetAllShowtimesDTO, { screenID?: string; date?: string }> {
-    return {
-      screenID: query.screen_id,
-      date: query.date,
-    };
-  }
-
   public static toGetAllResponse(
     result: GetAllShowtimesResult,
   ): BaseSuccessfulResponse<GetAllResponse> {
     return {
       data: {
-        showtimes: result.showtimes.map((showtime) => ({
+        items: result.items.map((showtime) => ({
           id: showtime.id,
           movie_id: showtime.movieID,
           movie_title: showtime.movieTitle,
@@ -153,7 +145,10 @@ export class ShowtimeMapper {
           pricing: showtime.pricing,
           status: showtime.status,
         })),
-        result_count: result.resultCount,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        total_pages: result.totalPages,
       },
     };
   }

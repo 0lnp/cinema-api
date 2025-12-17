@@ -7,6 +7,7 @@ import { RefreshTokenApplicationService } from "src/application/services/refresh
 import { DomainServiceModule } from "./domain_service_module";
 import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
+import { UserProfileApplicationService } from "src/application/services/user_profile_application_service";
 import { MovieApplicationService } from "src/application/services/movie_application_service";
 import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
 import { ProviderModule } from "./provider_module";
@@ -38,6 +39,10 @@ import { EventModule } from "./event_module";
       useClass: UserLogoutApplicationService,
     },
     {
+      provide: UserProfileApplicationService.name,
+      useClass: UserProfileApplicationService,
+    },
+    {
       provide: ScreenApplicationService.name,
       useClass: ScreenApplicationService,
     },
@@ -56,6 +61,7 @@ import { EventModule } from "./event_module";
     RefreshTokenApplicationService.name,
     ScreenApplicationService.name,
     UserLogoutApplicationService.name,
+    UserProfileApplicationService.name,
     MovieApplicationService.name,
     ShowtimeApplicationService.name,
   ],

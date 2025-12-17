@@ -2,12 +2,17 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity";
 import {
   Between,
+  FindOptionsOrder,
   IsNull,
   MoreThan,
   Repository,
   FindOptionsWhere,
 } from "typeorm";
-import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
+import {
+  ShowtimeRepository,
+  ShowtimeSearchFilters,
+  ShowtimeSortField,
+} from "src/domain/repositories/showtime_repository";
 import { Showtime } from "src/domain/aggregates/showtime";
 import { ShowtimeID } from "src/domain/value_objects/showtime_id";
 import { MovieID } from "src/domain/value_objects/movie_id";
@@ -20,6 +25,7 @@ import {
   InfrastructureError,
   InfrastructureErrorCode,
 } from "src/shared/exceptions/infrastructure_error";
+import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
 
 export class TypeormShowtimeRepository implements ShowtimeRepository {
   public constructor(
@@ -59,16 +65,27 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
     await this.ormRepository.save(showtimeEntity);
   }
 
-  public async allShowtimes(filters?: {
-    screenID?: ScreenID;
-    date?: string;
-  }): Promise<Showtime[]> {
+  public async allShowtimes(
+    query: PaginatedQuery<ShowtimeSortField>,
+    filters?: ShowtimeSearchFilters,
+  ): Promise<PaginatedResult<Showtime>> {
+    const { page, limit, sort } = query;
+    const skip = (page - 1) * limit;
+
     const where: FindOptionsWhere<ShowtimeORMEntity> = {
       deletedAt: IsNull(),
     };
 
     if (filters?.screenID) {
       where.screenID = filters.screenID.value;
+    }
+
+    if (filters?.movieID) {
+      where.movieID = filters.movieID.value;
+    }
+
+    if (filters?.status) {
+      where.status = filters.status;
     }
 
     if (filters?.date) {
@@ -79,11 +96,31 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
       where.timeStart = Between(startOfDay, endOfDay);
     }
 
-    const showtimes = await this.ormRepository.find({
+    const order: FindOptionsOrder<ShowtimeORMEntity> = {};
+    if (sort) {
+      if (sort.field === "basePrice") {
+        order.pricing = { amount: sort.order.toUpperCase() as "ASC" | "DESC" };
+      } else {
+        order[sort.field] = sort.order.toUpperCase() as "ASC" | "DESC";
+      }
+    } else {
+      order.timeStart = "ASC";
+    }
+
+    const [showtimes, total] = await this.ormRepository.findAndCount({
       where,
-      order: { timeStart: "ASC" },
+      order,
+      skip,
+      take: limit,
     });
-    return showtimes.map(this.toDomain);
+
+    return {
+      items: showtimes.map((showtime) => this.toDomain(showtime)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   public async upcomingShowtimesOfMovie(movieID: MovieID): Promise<Showtime[]> {

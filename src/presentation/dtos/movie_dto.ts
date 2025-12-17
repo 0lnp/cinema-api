@@ -1,4 +1,6 @@
 import { MovieCertificate } from "src/domain/value_objects/movie_certificate";
+import { MovieStatus } from "src/domain/value_objects/movie_status";
+import { PaginatedQueryRaw } from "../pipes/parse_paginated_query_pipe";
 
 export interface PostMovieBodyDTO {
   title: string;
@@ -10,7 +12,13 @@ export interface PostMovieBodyDTO {
   poster_path: string;
 }
 
-export interface GetMovieSearchQueryDTO {
+export interface GetMoviesQueryDTO extends PaginatedQueryRaw {
+  status?: MovieStatus;
+  genre?: string;
+  release_year?: number;
+}
+
+export interface GetMovieSearchExternalQueryDTO {
   v: string;
 }
 

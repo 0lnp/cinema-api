@@ -7,8 +7,8 @@ import {
   DeleteShowtimeDTO,
   DeleteShowtimeDTOSchema,
   DeleteShowtimeResult,
-  GetAllShowtimesDTO,
   GetAllShowtimesDTOSchema,
+  GetAllShowtimesRequest,
   GetAllShowtimesResult,
   GetShowtimeDTO,
   GetShowtimeDTOSchema,
@@ -32,6 +32,7 @@ import { MovieID } from "src/domain/value_objects/movie_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
 import { DomainEventPublisher } from "src/domain/ports/domain_event_publisher";
 import { ShowtimeScheduledEvent } from "src/domain/events/showtime_scheduled_event";
+import { MovieStatus } from "src/domain/value_objects/movie_status";
 
 export class ShowtimeApplicationService {
   public constructor(
@@ -46,20 +47,17 @@ export class ShowtimeApplicationService {
   ) {}
 
   public async getAllShowtimes(
-    request: ReplaceFields<
-      GetAllShowtimesDTO,
-      { screenID?: string; date?: string }
-    >,
+    request: GetAllShowtimesRequest,
   ): Promise<GetAllShowtimesResult> {
-    const dto = validate(GetAllShowtimesDTOSchema, request);
+    const filtersDTO = validate(GetAllShowtimesDTOSchema, request.filters);
 
-    const showtimes = await this.showtimeRepository.allShowtimes({
-      screenID: dto.screenID,
-      date: dto.date,
-    });
+    const result = await this.showtimeRepository.allShowtimes(
+      request.query,
+      filtersDTO,
+    );
 
-    const movieIDs = [...new Set(showtimes.map((s) => s.movieID.value))];
-    const screenIDs = [...new Set(showtimes.map((s) => s.screenID.value))];
+    const movieIDs = [...new Set(result.items.map((s) => s.movieID.value))];
+    const screenIDs = [...new Set(result.items.map((s) => s.screenID.value))];
 
     const [movies, screens] = await Promise.all([
       Promise.all(
@@ -80,7 +78,7 @@ export class ShowtimeApplicationService {
     );
 
     return {
-      showtimes: showtimes.map((showtime) => ({
+      items: result.items.map((showtime) => ({
         id: showtime.id.value,
         movieID: showtime.movieID.value,
         movieTitle: movieMap.get(showtime.movieID.value)?.title ?? "Unknown",
@@ -91,7 +89,10 @@ export class ShowtimeApplicationService {
         pricing: showtime.pricing.amount,
         status: showtime.status,
       })),
-      resultCount: showtimes.length,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
     };
   }
 
@@ -103,7 +104,7 @@ export class ShowtimeApplicationService {
     const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.SHOWTIME_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Showtime with ID "${dto.showtimeID.value}" not found`,
       });
     }
@@ -144,8 +145,8 @@ export class ShowtimeApplicationService {
       throw new ApplicationError({
         code:
           movie === null
-            ? ApplicationErrorCode.MOVIE_NOT_FOUND
-            : ApplicationErrorCode.SCREEN_NOT_FOUND,
+            ? ApplicationErrorCode.RESOURCE_NOT_FOUND
+            : ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: movie === null ? "Movie not found" : "Screen not found",
       });
     }
@@ -175,6 +176,9 @@ export class ShowtimeApplicationService {
       }
     }
 
+    movie.changeStatus(MovieStatus.COMING_SOON);
+
+    await this.movieRepository.save(movie);
     await this.showtimeRepository.save(showtime);
 
     this.eventPublisher.publish(
@@ -218,7 +222,7 @@ export class ShowtimeApplicationService {
     const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.SHOWTIME_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Showtime with ID "${dto.showtimeID.value}" not found`,
       });
     }
@@ -256,7 +260,7 @@ export class ShowtimeApplicationService {
     const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.SHOWTIME_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Showtime with ID "${dto.showtimeID.value}" not found`,
       });
     }

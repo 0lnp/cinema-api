@@ -11,6 +11,10 @@ import {
   DeleteMovieDTO,
   DeleteMovieDTOSchema,
   DeleteMovieResult,
+  GetAllMoviesDTOSchema,
+  GetAllMoviesRequest,
+  GetAllMoviesResult,
+  MovieListItem,
   SearchFromExternalDTO,
   SearchFromExternalDTOSchema,
   SearchFromExternalResult,
@@ -27,6 +31,7 @@ import { ReplaceFields } from "src/shared/types/replace_fields";
 import { MovieProvider } from "src/domain/ports/movie_provider";
 import { ConfigService } from "@nestjs/config";
 import { AppConfig } from "src/infrastructure/configs/app_config";
+import { formatDuration } from "src/shared/utilities/format_duration";
 
 export class MovieApplicationService {
   public constructor(
@@ -39,6 +44,25 @@ export class MovieApplicationService {
     @Inject(ConfigService)
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
+
+  public async getAllMovies(
+    request: GetAllMoviesRequest,
+  ): Promise<GetAllMoviesResult> {
+    const filtersDTO = validate(GetAllMoviesDTOSchema, request.filters);
+
+    const result = await this.movieRepository.allMovies(
+      request.query,
+      filtersDTO,
+    );
+
+    return {
+      items: this.mapAllMovieListItems(result.items),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
 
   public async create(request: CreateMovieDTO): Promise<CreateMovieResult> {
     const dto = validate(CreateMovieDTOSchema, request);
@@ -88,7 +112,7 @@ export class MovieApplicationService {
     );
     if (movie === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.MOVIE_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Movie with external ID "${dto.externalID}" not found"`,
       });
     }
@@ -114,7 +138,7 @@ export class MovieApplicationService {
     const movie = await this.movieRepository.movieOfID(dto.movieID);
     if (movie === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.MOVIE_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Movie with ID "${dto.movieID.value}" not found`,
       });
     }
@@ -137,7 +161,7 @@ export class MovieApplicationService {
     const movie = await this.movieRepository.movieOfID(dto.movieID);
     if (movie === null) {
       throw new ApplicationError({
-        code: ApplicationErrorCode.MOVIE_NOT_FOUND,
+        code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: `Movie with ID "${dto.movieID.value}" not found`,
       });
     }
@@ -150,5 +174,22 @@ export class MovieApplicationService {
       message: "Movie deleted successfully",
       id: movie.id.value,
     };
+  }
+
+  private mapAllMovieListItems(movies: Movie[]): MovieListItem[] {
+    return movies.map((movie) => ({
+      id: movie.id.value,
+      title: movie.title,
+      synopsis: movie.synopsis,
+      duration: formatDuration(movie.durationMinutes),
+      genres: movie.genres,
+      certificate: movie.certificate,
+      releaseYear: movie.releaseYear,
+      posterURL:
+        this.config.get("MOVIE_POSTER_BASE_URL", { infer: true }) +
+        movie.posterPath,
+      status: movie.status,
+      createdAt: movie.createdAt,
+    }));
   }
 }

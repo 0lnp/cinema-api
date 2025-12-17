@@ -10,6 +10,7 @@ import {
   Query,
   Request,
   UseGuards,
+  UsePipes,
 } from "@nestjs/common";
 import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
 import { AuthGuard } from "../guards/auth_guard";
@@ -29,6 +30,9 @@ import {
   PostShowtimeBodyDTO,
 } from "../dtos/showtime_dto";
 import { ShowtimeMapper } from "../mappers/showtime_mapper";
+import { ParsePaginatedQueryPipe } from "../pipes/parse_paginated_query_pipe";
+import { ShowtimeSortField } from "src/domain/repositories/showtime_repository";
+import { PaginatedQuery } from "src/shared/types/pagination";
 
 @Controller("showtimes")
 export class ShowtimeController {
@@ -44,9 +48,25 @@ export class ShowtimeController {
     [PermissionAction.MANAGE, PermissionResource.SHOWTIME],
   )
   @Get()
-  async getShowtimes(@Query() query: GetShowtimesQueryDTO) {
-    const dto = ShowtimeMapper.toGetAllRequest(query);
-    const result = await this.showtimeService.getAllShowtimes(dto);
+  @UsePipes(
+    new ParsePaginatedQueryPipe<ShowtimeSortField>([
+      "timeStart",
+      "createdAt",
+      "basePrice",
+    ]),
+  )
+  async getShowtimes(@Query() query: any) {
+    const { screen_id, movie_id, date, status, ...paginatedQuery } =
+      query as PaginatedQuery<ShowtimeSortField> & GetShowtimesQueryDTO;
+    const result = await this.showtimeService.getAllShowtimes({
+      query: paginatedQuery,
+      filters: {
+        screenID: screen_id,
+        movieID: movie_id,
+        date,
+        status,
+      },
+    });
     return ShowtimeMapper.toGetAllResponse(result);
   }
 

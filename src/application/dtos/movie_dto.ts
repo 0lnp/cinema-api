@@ -2,6 +2,8 @@ import { MovieCertificate } from "src/domain/value_objects/movie_certificate";
 import { MovieID } from "src/domain/value_objects/movie_id";
 import { MovieStatus } from "src/domain/value_objects/movie_status";
 import { UserID } from "src/domain/value_objects/user_id";
+import { MovieSortField } from "src/domain/repositories/movie_repository";
+import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
 import * as z from "zod";
 
 export const CreateMovieDTOSchema = z.object({
@@ -84,3 +86,35 @@ export interface DeleteMovieResult {
   message: string;
   id: string;
 }
+
+export const GetAllMoviesDTOSchema = z.object({
+  status: z.enum(MovieStatus).optional(),
+  genre: z.string().max(50).optional(),
+  releaseYear: z.coerce.number().min(1000).optional(),
+});
+
+export type GetAllMoviesDTO = z.infer<typeof GetAllMoviesDTOSchema>;
+
+export interface GetAllMoviesRequest {
+  query: PaginatedQuery<MovieSortField>;
+  filters?: {
+    status?: MovieStatus;
+    genre?: string;
+    releaseYear?: number;
+  };
+}
+
+export interface MovieListItem {
+  id: string;
+  title: string;
+  synopsis: string;
+  duration: string;
+  genres: string[];
+  certificate: string;
+  releaseYear: number;
+  posterURL: string;
+  status: MovieStatus;
+  createdAt: Date;
+}
+
+export type GetAllMoviesResult = PaginatedResult<MovieListItem>;

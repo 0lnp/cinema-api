@@ -1,7 +1,17 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { MovieRepository } from "src/domain/repositories/movie_repository";
+import {
+  MovieRepository,
+  MovieSearchFilters,
+  MovieSortField,
+} from "src/domain/repositories/movie_repository";
 import { MovieORMEntity } from "../databases/orm_entities/movie_orm_entity";
-import { IsNull, Repository } from "typeorm";
+import {
+  FindOptionsOrder,
+  FindOptionsWhere,
+  ILike,
+  IsNull,
+  Repository,
+} from "typeorm";
 import { Movie } from "src/domain/aggregates/movie";
 import { MovieID } from "src/domain/value_objects/movie_id";
 import { MovieStatus } from "src/domain/value_objects/movie_status";
@@ -10,6 +20,7 @@ import {
   InfrastructureError,
   InfrastructureErrorCode,
 } from "src/shared/exceptions/infrastructure_error";
+import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
 
 export class TypeormMovieRepository implements MovieRepository {
   public constructor(
@@ -23,6 +34,56 @@ export class TypeormMovieRepository implements MovieRepository {
       deletedAt: IsNull(),
     });
     return movie !== null ? this.toDomain(movie) : null;
+  }
+
+  public async allMovies(
+    query: PaginatedQuery<MovieSortField>,
+    filters?: MovieSearchFilters,
+  ): Promise<PaginatedResult<Movie>> {
+    const { page, limit, search, sort } = query;
+    const skip = (page - 1) * limit;
+
+    const where: FindOptionsWhere<MovieORMEntity> = {
+      deletedAt: IsNull(),
+    };
+
+    if (search) {
+      where.title = ILike(`%${search}%`);
+    }
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    if (filters?.genre) {
+      where.genres = ILike(`%${filters.genre}%`);
+    }
+
+    if (filters?.releaseYear) {
+      where.releaseYear = filters.releaseYear;
+    }
+
+    const order: FindOptionsOrder<MovieORMEntity> = {};
+    if (sort) {
+      order[sort.field] = sort.order.toUpperCase() as "ASC" | "DESC";
+    } else {
+      order.createdAt = "DESC";
+    }
+
+    const [movies, total] = await this.ormRepository.findAndCount({
+      where,
+      order,
+      skip,
+      take: limit,
+    });
+
+    return {
+      items: movies.map((movie) => this.toDomain(movie)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   public async save(movie: Movie): Promise<void> {
@@ -56,8 +117,8 @@ export class TypeormMovieRepository implements MovieRepository {
       id: new MovieID(movie.id),
       title: movie.title,
       synopsis: movie.synopsis,
-      durationMinutes: movie.durationMinutes,
-      releaseYear: movie.releaseYear,
+      durationMinutes: Number(movie.durationMinutes),
+      releaseYear: Number(movie.releaseYear),
       certificate: movie.certificate,
       genres: movie.genres,
       posterPath: movie.posterPath,

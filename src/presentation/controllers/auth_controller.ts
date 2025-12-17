@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Inject,
   Post,
   Request,
@@ -16,6 +17,7 @@ import { UserRegisterApplicationService } from "src/application/services/user_re
 import { UserLoginApplicationService } from "src/application/services/user_login_application_service";
 import { RefreshTokenApplicationService } from "src/application/services/refresh_token_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
+import { UserProfileApplicationService } from "src/application/services/user_profile_application_service";
 import { AuthGuard } from "../guards/auth_guard";
 import { type Request as TRequest } from "express";
 
@@ -30,6 +32,8 @@ export class AuthController {
     private readonly refreshTokenService: RefreshTokenApplicationService,
     @Inject(UserLogoutApplicationService.name)
     private readonly userLogoutService: UserLogoutApplicationService,
+    @Inject(UserProfileApplicationService.name)
+    private readonly userProfileService: UserProfileApplicationService,
   ) {}
 
   @Post("register")
@@ -61,5 +65,14 @@ export class AuthController {
       accessToken: req.accessToken,
     });
     return result;
+  }
+
+  @UseGuards(AuthGuard)
+  @Get("profile")
+  async getAuthProfile(@Request() req: TRequest) {
+    const result = await this.userProfileService.execute({
+      userID: req.user.id,
+    });
+    return AuthMapper.toProfileResponse(result);
   }
 }
