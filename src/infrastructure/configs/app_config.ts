@@ -14,6 +14,11 @@ export const AppConfigSchema = z.object({
   REDIS_PASSWORD: z.string().default(""),
   REDIS_DATABASE: z.coerce.number().default(0),
 
+  BULLMQ_REDIS_HOST: z.string().default("localhost"),
+  BULLMQ_REDIS_PORT: z.coerce.number().default(6379),
+  BULLMQ_REDIS_PASSWORD: z.string().default(""),
+  BULLMQ_REDIS_DATABASE: z.coerce.number().default(1),
+
   JWT_ACCESS_TOKEN_SECRET: z.string().min(20),
   JWT_ACCESS_TOKEN_LIFETIME: z.string().default("15m"),
   JWT_REFRESH_TOKEN_SECRET: z.string().min(20),

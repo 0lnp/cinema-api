@@ -5,6 +5,8 @@ import { APP_FILTER } from "@nestjs/core";
 import { ControllerModule } from "./controller_module";
 import { GlobalExceptionFilter } from "../http/filters/global_exception_filter";
 import { RequestLoggerMiddleware } from "../http/middlewares/request_logger_middleware";
+import { JobModule } from "./job_module";
+import { EventModule } from "./event_module";
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { RequestLoggerMiddleware } from "../http/middlewares/request_logger_midd
       },
       isGlobal: true,
     }),
+    EventModule,
+    JobModule,
     ControllerModule,
   ],
   providers: [

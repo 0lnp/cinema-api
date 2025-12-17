@@ -7,4 +7,5 @@ export abstract class RefreshTokenRepository {
   public abstract tokenOfHash(hash: string): Promise<RefreshToken | null>;
   public abstract revokeByFamily(family: TokenID): Promise<void>;
   public abstract save(token: RefreshToken): Promise<void>;
+  public abstract deleteExpiredTokens(olderThan: Date): Promise<number>;
 }

@@ -30,6 +30,8 @@ import { ReplaceFields } from "src/shared/types/replace_fields";
 import { ShowtimeStatus } from "src/domain/value_objects/showtime_status";
 import { MovieID } from "src/domain/value_objects/movie_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
+import { DomainEventPublisher } from "src/domain/ports/domain_event_publisher";
+import { ShowtimeScheduledEvent } from "src/domain/events/showtime_scheduled_event";
 
 export class ShowtimeApplicationService {
   public constructor(
@@ -39,6 +41,8 @@ export class ShowtimeApplicationService {
     private readonly screenRepository: ScreenRepository,
     @Inject(ShowtimeRepository.name)
     private readonly showtimeRepository: ShowtimeRepository,
+    @Inject(DomainEventPublisher.name)
+    private readonly eventPublisher: DomainEventPublisher,
   ) {}
 
   public async getAllShowtimes(
@@ -172,6 +176,16 @@ export class ShowtimeApplicationService {
     }
 
     await this.showtimeRepository.save(showtime);
+
+    this.eventPublisher.publish(
+      new ShowtimeScheduledEvent(
+        showtime.id,
+        showtime.movieID,
+        showtime.screenID,
+        showtime.timeSlot.timeStart,
+        showtime.timeSlot.timeEnd,
+      ),
+    );
 
     return {
       message: "Showtime created successfully",

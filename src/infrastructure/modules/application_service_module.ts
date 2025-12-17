@@ -10,9 +10,16 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
 import { MovieApplicationService } from "src/application/services/movie_application_service";
 import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
 import { ProviderModule } from "./provider_module";
+import { EventModule } from "./event_module";
 
 @Module({
-  imports: [RepositoryModule, PortModule, DomainServiceModule, ProviderModule],
+  imports: [
+    RepositoryModule,
+    PortModule,
+    DomainServiceModule,
+    ProviderModule,
+    EventModule,
+  ],
   providers: [
     {
       provide: UserRegisterApplicationService.name,

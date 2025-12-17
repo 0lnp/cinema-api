@@ -1,6 +1,12 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity";
-import { Between, IsNull, Repository, FindOptionsWhere } from "typeorm";
+import {
+  Between,
+  IsNull,
+  MoreThan,
+  Repository,
+  FindOptionsWhere,
+} from "typeorm";
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
 import { Showtime } from "src/domain/aggregates/showtime";
 import { ShowtimeID } from "src/domain/value_objects/showtime_id";
@@ -75,6 +81,20 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
 
     const showtimes = await this.ormRepository.find({
       where,
+      order: { timeStart: "ASC" },
+    });
+    return showtimes.map(this.toDomain);
+  }
+
+  public async upcomingShowtimesOfMovie(movieID: MovieID): Promise<Showtime[]> {
+    const now = new Date();
+    const showtimes = await this.ormRepository.find({
+      where: {
+        movieID: movieID.value,
+        timeStart: MoreThan(now),
+        deletedAt: IsNull(),
+        status: ShowtimeStatus.SCHEDULED,
+      },
       order: { timeStart: "ASC" },
     });
     return showtimes.map(this.toDomain);
