@@ -6,6 +6,8 @@ import { RefreshTokenORMEntity } from "./orm_entities/refresh_token_orm_entity";
 import { ScreenORMEntity } from "./orm_entities/screen_orm_entity";
 import { MovieORMEntity } from "./orm_entities/movie_orm_entity";
 import { ShowtimeORMEntity } from "./orm_entities/showtime_orm_entity";
+import { SeatInventoryORMEntity } from "./orm_entities/seat_inventory_orm_entity";
+import { BookingORMEntity } from "./orm_entities/booking_orm_entity";
 
 export const typeORMDataSourceOptions = (
   config: ConfigService<AppConfig, true>,
@@ -22,6 +24,8 @@ export const typeORMDataSourceOptions = (
     ScreenORMEntity,
     MovieORMEntity,
     ShowtimeORMEntity,
+    SeatInventoryORMEntity,
+    BookingORMEntity,
   ],
 });
 
@@ -38,6 +42,8 @@ export default new DataSource({
     ScreenORMEntity,
     MovieORMEntity,
     ShowtimeORMEntity,
+    SeatInventoryORMEntity,
+    BookingORMEntity,
   ],
   migrations: ["migrations/*.ts"],
   synchronize: false,

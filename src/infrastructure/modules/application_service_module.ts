@@ -10,6 +10,7 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
 import { UserProfileApplicationService } from "src/application/services/user_profile_application_service";
 import { MovieApplicationService } from "src/application/services/movie_application_service";
 import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
+import { BookingApplicationService } from "src/application/services/booking_application_service";
 import { ProviderModule } from "./provider_module";
 import { EventModule } from "./event_module";
 
@@ -54,6 +55,10 @@ import { EventModule } from "./event_module";
       provide: ShowtimeApplicationService.name,
       useClass: ShowtimeApplicationService,
     },
+    {
+      provide: BookingApplicationService.name,
+      useClass: BookingApplicationService,
+    },
   ],
   exports: [
     UserRegisterApplicationService.name,
@@ -64,6 +69,7 @@ import { EventModule } from "./event_module";
     UserProfileApplicationService.name,
     MovieApplicationService.name,
     ShowtimeApplicationService.name,
+    BookingApplicationService.name,
   ],
 })
 export class ApplicationServiceModule {}

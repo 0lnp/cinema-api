@@ -8,6 +8,7 @@ export enum InfrastructureErrorCode {
   REDIS_CONNECTION_FAILED = "REDIS_CONNECTION_FAILED",
   EXTERNAL_API_TIMEOUT = "EXTERNAL_API_TIMEOUT",
   EXTERNAL_API_ERROR = "EXTERNAL_API_ERROR",
+  STORAGE_ERROR = "STORAGE_ERROR",
 }
 
 export class InfrastructureError extends Error {

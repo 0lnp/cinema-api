@@ -28,6 +28,33 @@ export const AppConfigSchema = z.object({
   TMDB_API_BASE_URL: z.url(),
   TMDB_REQUEST_TIMEOUT_MS: z.coerce.number().default(10000),
   MOVIE_POSTER_BASE_URL: z.url(),
+
+  XENDIT_API_KEY: z.string(),
+  XENDIT_WEBHOOK_TOKEN: z.string(),
+  XENDIT_BASE_URL: z.url().default("https://api.xendit.co"),
+  XENDIT_REQUEST_TIMEOUT_MS: z.coerce.number().default(30000),
+  PAYMENT_SUCCESS_REDIRECT_URL: z.url(),
+  PAYMENT_FAILURE_REDIRECT_URL: z.url(),
+
+  MINIO_ENDPOINT: z.string().default("localhost"),
+  MINIO_PORT: z.coerce.number().default(9000),
+  MINIO_ACCESS_KEY: z.string(),
+  MINIO_SECRET_KEY: z.string(),
+  MINIO_BUCKET_NAME: z.string().default("booking-assets"),
+  MINIO_USE_SSL: z.coerce.boolean().default(false),
+
+  SMTP_HOST: z.string(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string(),
+  SMTP_PASSWORD: z.string(),
+  SMTP_FROM_ADDRESS: z.email(),
+  SMTP_FROM_NAME: z.string().default("Cinema Booking"),
+
+  SERVICE_FEE_AMOUNT_IDR: z.coerce.number().min(0).default(2000),
+  SEAT_HOLD_UNTIL_MS: z.coerce
+    .number()
+    .min(0)
+    .default(15 * 60 * 1000),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;

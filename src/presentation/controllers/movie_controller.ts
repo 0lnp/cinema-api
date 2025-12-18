@@ -91,7 +91,7 @@ export class MovieController {
     [PermissionAction.CREATE, PermissionResource.MOVIE],
     [PermissionAction.MANAGE, PermissionResource.MOVIE],
   )
-  @Get("/external/search")
+  @Get("/search/external")
   async getMovieSearchExternal(@Query() query: GetMovieSearchExternalQueryDTO) {
     const result = await this.movieService.searchFromExternal({
       keyword: query.v,
