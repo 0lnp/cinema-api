@@ -374,6 +374,7 @@ export class BookingApplicationService {
     const paymentResponse = await this.paymentGateway.createPaymentRequest({
       bookingId: booking.id,
       amount: booking.totalAmount,
+      serviceFee: booking.serviceFee,
       customerEmail: user.email,
       customerName: user.displayName,
       description: `Cinema booking ${booking.id.value}`,
@@ -486,6 +487,13 @@ export class BookingApplicationService {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
         message: "Booking not found",
+      });
+    }
+
+    if (booking.status !== BookingStatus.PENDING_PAYMENT) {
+      throw new ApplicationError({
+        code: ApplicationErrorCode.INVALID_BOOKING_STATE,
+        message: "Only bookings with PENDING_PAYMENT status can be cancelled",
       });
     }
 

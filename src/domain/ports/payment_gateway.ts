@@ -5,6 +5,7 @@ import { BookingID } from "../value_objects/booking_id";
 export interface PaymentRequest {
   bookingId: BookingID;
   amount: Money;
+  serviceFee: Money;
   customerEmail: Email;
   customerName: string;
   description: string;

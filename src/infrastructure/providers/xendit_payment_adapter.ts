@@ -62,7 +62,7 @@ export class XenditPaymentAdapter implements PaymentGateway {
         url,
         params: {
           bookingId: request.bookingId.value,
-          amount: request.amount.amount,
+          amount: request.amount.amount + request.serviceFee.amount,
           currency: request.amount.currency,
         },
       },
