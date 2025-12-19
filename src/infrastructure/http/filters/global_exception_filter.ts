@@ -107,12 +107,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             message: exception.message,
           };
         case ApplicationErrorCode.VALIDATION_ERROR:
+        case ApplicationErrorCode.INVALID_INPUT:
           return {
             status: HttpStatus.BAD_REQUEST,
             message: exception.message,
             errors: exception.details,
           };
         case ApplicationErrorCode.EMAIL_ALREADY_EXISTS:
+        case ApplicationErrorCode.SHOWTIME_CONFLICT:
           return {
             status: HttpStatus.CONFLICT,
             message: exception.message,
@@ -125,7 +127,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             status: HttpStatus.UNAUTHORIZED,
             message: exception.message,
           };
-        case ApplicationErrorCode.SCREEN_NOT_FOUND:
+        case ApplicationErrorCode.RESOURCE_NOT_FOUND:
           return {
             status: HttpStatus.NOT_FOUND,
             message: exception.message,
@@ -171,7 +173,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       requestId: request.requestID,
-      token: request.headers.authorization,
+      user: request.user?.id.value ?? "guest",
       timestamp: new Date().toISOString(),
     };
 
@@ -181,6 +183,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ...errorDetails,
           message: exception.message,
           code: exception.code,
+          details: exception.details,
         },
         exception.stack,
       );

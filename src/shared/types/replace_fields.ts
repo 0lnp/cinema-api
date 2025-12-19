@@ -1,0 +1,1 @@
+export type ReplaceFields<T extends object, O extends Partial<Record<keyof T, any>>> = Omit<T, keyof O> & O;

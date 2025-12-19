@@ -16,15 +16,15 @@ export class SystemRoles {
     const customerPermissions: NonEmptyArray<Permission> = [
       new Permission(PermissionAction.CREATE, PermissionResource.BOOKING),
       new Permission(PermissionAction.VIEW, PermissionResource.BOOKING),
-      new Permission(PermissionAction.VIEW, PermissionResource.MOVIE),
-      new Permission(PermissionAction.VIEW, PermissionResource.SHOWTIME),
+      new Permission(PermissionAction.VIEW_ALL, PermissionResource.MOVIE),
+      new Permission(PermissionAction.VIEW_ALL, PermissionResource.SHOWTIME),
     ];
 
     const boxOfficeStaffPermissions: NonEmptyArray<Permission> = [
       new Permission(PermissionAction.CREATE, PermissionResource.BOOKING),
-      new Permission(PermissionAction.VIEW, PermissionResource.BOOKING),
-      new Permission(PermissionAction.VIEW, PermissionResource.MOVIE),
-      new Permission(PermissionAction.VIEW, PermissionResource.SHOWTIME),
+      new Permission(PermissionAction.VIEW_ALL, PermissionResource.BOOKING),
+      new Permission(PermissionAction.VIEW_ALL, PermissionResource.MOVIE),
+      new Permission(PermissionAction.VIEW_ALL, PermissionResource.SHOWTIME),
     ];
 
     const managerPermissions: NonEmptyArray<Permission> = [

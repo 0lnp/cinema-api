@@ -1,5 +1,5 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { RefreshToken, TokenStatus } from "src/domain/aggregates/refresh_token";
+import { RefreshToken } from "src/domain/aggregates/refresh_token";
 import { type RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
 import { TokenID } from "src/domain/value_objects/token_id";
 import {
@@ -7,8 +7,9 @@ import {
   InfrastructureErrorCode,
 } from "src/shared/exceptions/infrastructure_error";
 import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_orm_entity";
-import { Repository } from "typeorm";
+import { LessThan, Repository } from "typeorm";
 import { UserID } from "src/domain/value_objects/user_id";
+import { TokenStatus } from "src/domain/value_objects/token_status";
 
 export class TypeORMRefreshTokenRepository implements RefreshTokenRepository {
   public constructor(
@@ -72,6 +73,13 @@ export class TypeORMRefreshTokenRepository implements RefreshTokenRepository {
 
   public async revokeByFamily(family: TokenID): Promise<void> {
     await this.ormRepository.delete({ tokenFamily: family.value });
+  }
+
+  public async deleteExpiredTokens(olderThan: Date): Promise<number> {
+    const result = await this.ormRepository.delete({
+      issuedAt: LessThan(olderThan),
+    });
+    return result.affected ?? 0;
   }
 
   private toDomain(token: RefreshTokenORMEntity): RefreshToken {

@@ -15,7 +15,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
     this.logger.log({
       event: "REQUEST_START",
-      requestId: requestID,
+      requestID,
       method,
       url: originalUrl,
       userAgent: this.sanitizeUserAgent(req.headers["user-agent"]),
@@ -28,12 +28,12 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
       const logData = {
         event: "REQUEST_END",
-        requestId: requestID,
+        requestID,
         method,
         url: originalUrl,
         statusCode,
         duration: `${duration}ms`,
-        token: req.headers.authorization,
+        user: req.user?.id.value ?? "guest",
         timestamp: new Date().toISOString(),
       };
 

@@ -16,6 +16,7 @@ import {
   RefreshTokenDTO,
   RefreshTokenResult,
 } from "src/application/dtos/refresh_token_dto";
+import { type UserProfileResult } from "src/application/dtos/user_profile_dto";
 
 export interface RegisterResponse {
   user_id: string;
@@ -29,6 +30,15 @@ export interface LoginResponse {
 export interface RefreshResponse {
   access_token: string;
   refresh_token: string;
+}
+
+export interface ProfileResponse {
+  id: string;
+  display_name: string;
+  email: string;
+  role_name: string;
+  last_login_at: string | null;
+  registered_at: string;
 }
 
 export class AuthMapper {
@@ -84,6 +94,21 @@ export class AuthMapper {
       data: {
         access_token: result.accessToken,
         refresh_token: result.refreshToken,
+      },
+    };
+  }
+
+  public static toProfileResponse(
+    result: UserProfileResult,
+  ): BaseSuccessfulResponse<ProfileResponse> {
+    return {
+      data: {
+        id: result.id,
+        display_name: result.displayName,
+        email: result.email,
+        role_name: result.roleName,
+        last_login_at: result.lastLoginAt?.toISOString() ?? null,
+        registered_at: result.registeredAt.toISOString(),
       },
     };
   }

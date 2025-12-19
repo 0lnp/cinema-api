@@ -9,6 +9,15 @@ import { RefreshTokenRepository } from "src/domain/repositories/refresh_token_re
 import { typeORMDataSourceOptions } from "../databases/typeorm_data_source";
 import { UserORMEntity } from "../databases/orm_entities/user_orm_entity";
 import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_orm_entity";
+import { ScreenRepository } from "src/domain/repositories/screen_repository";
+import { TypeORMScreenRepository } from "../persistences/typeorm_screen_repository";
+import { ScreenORMEntity } from "../databases/orm_entities/screen_orm_entity";
+import { MovieRepository } from "src/domain/repositories/movie_repository";
+import { TypeormMovieRepository } from "../persistences/typeorm_movie_repository";
+import { MovieORMEntity } from "../databases/orm_entities/movie_orm_entity";
+import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
+import { TypeormShowtimeRepository } from "../persistences/typeorm_showtime_repository";
+import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity";
 
 @Module({
   imports: [
@@ -19,7 +28,13 @@ import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_o
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([UserORMEntity, RefreshTokenORMEntity]),
+    TypeOrmModule.forFeature([
+      UserORMEntity,
+      RefreshTokenORMEntity,
+      ScreenORMEntity,
+      MovieORMEntity,
+      ShowtimeORMEntity,
+    ]),
   ],
   providers: [
     {
@@ -30,7 +45,25 @@ import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_o
       provide: RefreshTokenRepository.name,
       useClass: TypeORMRefreshTokenRepository,
     },
+    {
+      provide: ScreenRepository.name,
+      useClass: TypeORMScreenRepository,
+    },
+    {
+      provide: MovieRepository.name,
+      useClass: TypeormMovieRepository,
+    },
+    {
+      provide: ShowtimeRepository.name,
+      useClass: TypeormShowtimeRepository,
+    },
   ],
-  exports: [UserRepository.name, RefreshTokenRepository.name],
+  exports: [
+    UserRepository.name,
+    RefreshTokenRepository.name,
+    ScreenRepository.name,
+    MovieRepository.name,
+    ShowtimeRepository.name,
+  ],
 })
 export class RepositoryModule {}
