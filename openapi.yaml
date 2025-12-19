@@ -1,0 +1,2851 @@
+openapi: 3.0.0
+info:
+  title: Cinema API
+  description: |
+    A comprehensive cinema management API built with NestJS following Domain-Driven Design (DDD) patterns.
+
+    ## Authentication
+    This API uses JWT Bearer tokens for authentication. Most endpoints require authentication.
+
+    1. Register a new user at `POST /auth/register`
+    2. Login at `POST /auth/login` to receive access and refresh tokens
+    3. Include the access token in the `Authorization` header as `Bearer <token>`
+    4. When the access token expires, use `POST /auth/refresh` to get new tokens
+
+    ## Permission System
+    The API uses a role-based permission system with the following roles:
+
+    | Role | Description |
+    |------|-------------|
+    | CUSTOMER | Basic user with viewing permissions |
+    | BOX_OFFICE_STAFF | Can create bookings and view showtimes |
+    | MANAGER | Can manage movies, screens, and showtimes |
+    | ADMIN | Full system access |
+
+    ## Error Handling
+    All errors follow a consistent response structure with appropriate HTTP status codes.
+
+    ## Pagination
+    List endpoints support pagination with `page`, `limit`, `sort_by`, and `sort_order` query parameters.
+  version: 1.0.0
+  contact:
+    name: Cinema API Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Movies
+    description: Movie management operations
+  - name: Screens
+    description: Cinema screen management
+  - name: Showtimes
+    description: Movie showtime scheduling
+  - name: Bookings
+    description: Ticket booking and payment operations
+  - name: Webhooks
+    description: External service webhook handlers
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from the login endpoint
+
+  schemas:
+    # ==================== Common Schemas ====================
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - timestamp
+        - path
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid credentials"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the error occurred
+          example: "2025-12-17T10:30:00.000Z"
+        path:
+          type: string
+          description: The request path that caused the error
+          example: "/auth/login"
+        errors:
+          type: object
+          description: Additional error details for validation errors
+          additionalProperties: true
+          example:
+            email: "Invalid email format"
+
+    PaginationMeta:
+      type: object
+      required:
+        - total
+        - page
+        - limit
+        - total_pages
+      properties:
+        total:
+          type: integer
+          description: Total number of items across all pages
+          minimum: 0
+          example: 150
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          minimum: 1
+          maximum: 100
+          example: 10
+        total_pages:
+          type: integer
+          description: Total number of pages
+          minimum: 0
+          example: 15
+
+    # ==================== Auth Schemas ====================
+    RegisterRequest:
+      type: object
+      required:
+        - display_name
+        - email
+        - password
+      properties:
+        display_name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: User's display name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+          description: Valid email address (will be normalized to lowercase)
+          example: "john.doe@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+          description: |
+            Password must contain:
+            - At least 8 characters
+            - At least one lowercase letter
+            - At least one uppercase letter
+            - At least one number
+            - At least one special character (!@#$%^&*()_+-=[]{};':"\\|,.<>/?)
+          example: "SecureP@ss123"
+
+    RegisterResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "User registered successfully"
+        data:
+          type: object
+          required:
+            - user_id
+          properties:
+            user_id:
+              type: string
+              pattern: "^USR_[\\w-]+$"
+              description: Unique user identifier
+              example: "USR_550e8400-e29b-41d4-a716-446655440000"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Registered email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          maxLength: 100
+          description: User's password
+          example: "SecureP@ss123"
+
+    LoginResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "User logged in successfully"
+        data:
+          type: object
+          required:
+            - access_token
+            - refresh_token
+          properties:
+            access_token:
+              type: string
+              description: JWT access token for API authentication
+              example: "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQ1VTVE9NRVIiLCJpYXQiOjE3NjU5NTU3MjIsImV4cCI6MTc2NTk1NjYyMiwic3ViIjoiVVNSX2NiZTYyMTU0LTdjN2UtNGI3ZS05NjdjLTYzZjA5NGJjNTA2NSJ9.HvTgp4TesCgaUAaf89dE9_WudODrwHsa7wL5dHHcVZg"
+            refresh_token:
+              type: string
+              description: JWT refresh token for obtaining new access tokens
+              example: "eyJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU5NTU3MjIsImV4cCI6MTc2NjU2MDUyMiwic3ViIjoiVVNSX2NiZTYyMTU0LTdjN2UtNGI3ZS05NjdjLTYzZjA5NGJjNTA2NSJ9.d9Vtaz-BJncBOShvR2uQ1-6qaTbOCUCxnywQWSbmXW8"
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Valid refresh token obtained from login or previous refresh
+          example: "eyJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU5NTU3MjIsImV4cCI6MTc2NjU2MDUyMiwic3ViIjoiVVNSX2NiZTYyMTU0LTdjN2UtNGI3ZS05NjdjLTYzZjA5NGJjNTA2NSJ9.d9Vtaz-BJncBOShvR2uQ1-6qaTbOCUCxnywQWSbmXW8"
+
+    RefreshTokenResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Token refreshed successfully"
+        data:
+          type: object
+          required:
+            - access_token
+            - refresh_token
+          properties:
+            access_token:
+              type: string
+              description: New JWT access token
+              example: "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQ1VTVE9NRVIiLCJpYXQiOjE3NjU5NTU4ODYsImV4cCI6MTc2NTk1Njc4Niwic3ViIjoiVVNSX2NiZTYyMTU0LTdjN2UtNGI3ZS05NjdjLTYzZjA5NGJjNTA2NSJ9.DE1yIg5P5QVfDisKKkSFDH9EP57sec9PGMMrOfasQuY"
+            refresh_token:
+              type: string
+              description: New JWT refresh token (previous token is invalidated)
+              example: "eyJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU5NTU4ODYsImV4cCI6MTc2NjU2MDY4Niwic3ViIjoiVVNSX2NiZTYyMTU0LTdjN2UtNGI3ZS05NjdjLTYzZjA5NGJjNTA2NSJ9.TzwCJYk9ZEsKYWpub88hZ3egqAXeG6xEX0ZZGdmD3r0"
+
+    LogoutResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Logged out successfully"
+
+    ProfileResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - display_name
+            - email
+            - role_name
+            - last_login_at
+            - registered_at
+          properties:
+            id:
+              type: string
+              pattern: "^USR_[\\w-]+$"
+              description: Unique user identifier
+              example: "USR_550e8400-e29b-41d4-a716-446655440000"
+            display_name:
+              type: string
+              description: User's display name
+              example: "John Doe"
+            email:
+              type: string
+              format: email
+              description: User's email address
+              example: "john.doe@example.com"
+            role_name:
+              type: string
+              enum:
+                - CUSTOMER
+                - BOX_OFFICE_STAFF
+                - MANAGER
+                - ADMIN
+              description: User's role in the system
+              example: "CUSTOMER"
+            last_login_at:
+              type: string
+              nullable: true
+              format: date-time
+              description: Timestamp of last login (null if never logged in)
+              example: "2025-12-17T10:30:00.000Z"
+            registered_at:
+              type: string
+              format: date-time
+              description: Timestamp of user registration
+              example: "2025-12-15T08:00:00.000Z"
+
+    # ==================== Movie Schemas ====================
+    MovieCertificate:
+      type: string
+      enum:
+        - SU
+        - "13+"
+        - "17+"
+        - "21+"
+      description: |
+        Age rating certificate:
+        - SU: Suitable for all ages
+        - 13+: Suitable for ages 13 and above
+        - 17+: Suitable for ages 17 and above
+        - 21+: Adults only
+
+    MovieStatus:
+      type: string
+      enum:
+        - COMING_SOON
+        - NOW_SHOWING
+        - ENDED_RUN
+      description: Current status of the movie in the cinema
+
+    CreateMovieRequest:
+      type: object
+      required:
+        - title
+        - synopsis
+        - duration_minutes
+        - genres
+        - certificate
+        - release_year
+        - poster_path
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: Movie title
+          example: "The Matrix Resurrections"
+        synopsis:
+          type: string
+          maxLength: 1000
+          description: Movie plot summary
+          example: "Return to a world of two realities: one, everyday life; the other, what lies behind it."
+        duration_minutes:
+          type: integer
+          minimum: 1
+          description: Movie runtime in minutes
+          example: 148
+        genres:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          minItems: 1
+          description: List of genres
+          example: ["Action", "Sci-Fi"]
+        certificate:
+          $ref: "#/components/schemas/MovieCertificate"
+        release_year:
+          type: integer
+          minimum: 1000
+          description: Year of release
+          example: 2021
+        poster_path:
+          type: string
+          maxLength: 100
+          description: Path or URL to the movie poster
+          example: "/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
+
+    CreateMovieResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Movie created successfully"
+        data:
+          type: object
+          required:
+            - id
+            - title
+            - created_at
+          properties:
+            id:
+              type: string
+              pattern: "^MOV_[\\w-]+$"
+              description: Unique movie identifier
+              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+            title:
+              type: string
+              example: "The Matrix Resurrections"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-17T10:30:00.000Z"
+
+    MovieListItem:
+      type: object
+      required:
+        - id
+        - title
+        - synopsis
+        - duration_minutes
+        - genres
+        - certificate
+        - release_year
+        - poster_path
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          pattern: "^MOV_[\\w-]+$"
+          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "The Matrix Resurrections"
+        synopsis:
+          type: string
+          example: "Return to a world of two realities..."
+        duration_minutes:
+          type: integer
+          example: 148
+        genres:
+          type: array
+          items:
+            type: string
+          example: ["Action", "Sci-Fi"]
+        certificate:
+          type: string
+          example: "17+"
+        release_year:
+          type: integer
+          example: 2021
+        poster_path:
+          type: string
+          example: "/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
+        status:
+          $ref: "#/components/schemas/MovieStatus"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-17T10:30:00.000Z"
+
+    GetAllMoviesResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - total_pages
+          allOf:
+            - $ref: "#/components/schemas/PaginationMeta"
+            - type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/MovieListItem"
+
+    ExternalMovieSearchResult:
+      type: object
+      required:
+        - external_id
+        - title
+        - synopsis
+        - release_year
+        - poster_url
+      properties:
+        external_id:
+          type: string
+          description: External provider's movie ID (e.g., TMDB ID)
+          example: "624860"
+        title:
+          type: string
+          example: "The Matrix Resurrections"
+        synopsis:
+          type: string
+          example: "Return to a world of two realities..."
+        release_year:
+          type: integer
+          example: 2021
+        poster_url:
+          type: string
+          format: uri
+          description: Full URL to the movie poster
+          example: "https://image.tmdb.org/t/p/w500/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
+
+    SearchExternalMoviesResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - results
+            - result_count
+          properties:
+            results:
+              type: array
+              items:
+                $ref: "#/components/schemas/ExternalMovieSearchResult"
+            result_count:
+              type: integer
+              minimum: 0
+              example: 5
+
+    SyncMovieRequest:
+      type: object
+      required:
+        - external_id
+      properties:
+        external_id:
+          type: string
+          minLength: 1
+          description: External movie provider's ID (e.g., TMDB ID)
+          example: "624860"
+
+    ChangeMovieStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/MovieStatus"
+
+    ChangeMovieStatusResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Movie status updated successfully"
+        data:
+          type: object
+          required:
+            - id
+            - title
+          properties:
+            id:
+              type: string
+              pattern: "^MOV_[\\w-]+$"
+              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+            title:
+              type: string
+              example: "The Matrix Resurrections"
+
+    DeleteMovieResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Movie deleted successfully"
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              pattern: "^MOV_[\\w-]+$"
+              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+
+    # ==================== Screen Schemas ====================
+    SeatRow:
+      type: object
+      required:
+        - label
+        - seat_count
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Row label (e.g., "A", "B", "C")
+          example: "A"
+        seat_count:
+          type: integer
+          minimum: 1
+          description: Number of seats in this row
+          example: 12
+
+    CreateScreenRequest:
+      type: object
+      required:
+        - name
+        - rows
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Screen/theater name
+          example: "Screen 1"
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeatRow"
+          minItems: 1
+          description: Seat layout configuration
+          example:
+            - label: "A"
+              seat_count: 10
+            - label: "B"
+              seat_count: 12
+            - label: "C"
+              seat_count: 12
+
+    CreateScreenResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Screen created successfully"
+        data:
+          type: object
+          required:
+            - id
+            - name
+            - capacity
+            - seat_layout
+            - created_at
+          properties:
+            id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              description: Unique screen identifier
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+            name:
+              type: string
+              example: "Screen 1"
+            capacity:
+              type: integer
+              minimum: 1
+              description: Total seat count
+              example: 34
+            seat_layout:
+              type: array
+              items:
+                $ref: "#/components/schemas/SeatRow"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-17T10:30:00.000Z"
+
+    SetScreenLayoutRequest:
+      type: object
+      required:
+        - rows
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeatRow"
+          minItems: 1
+          description: New seat layout configuration
+
+    SetScreenLayoutResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Screen layout updated successfully"
+        data:
+          type: object
+          required:
+            - id
+            - name
+            - capacity
+            - seat_layout
+          properties:
+            id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+            name:
+              type: string
+              example: "Screen 1"
+            capacity:
+              type: integer
+              example: 50
+            seat_layout:
+              type: array
+              items:
+                $ref: "#/components/schemas/SeatRow"
+
+    DeleteScreenResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Screen deleted successfully"
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+
+    # ==================== Showtime Schemas ====================
+    ShowtimeStatus:
+      type: string
+      enum:
+        - SCHEDULED
+        - CANCELLED
+        - COMPLETED
+      description: |
+        Current status of the showtime:
+        - SCHEDULED: Showtime is upcoming
+        - CANCELLED: Showtime was cancelled
+        - COMPLETED: Showtime has ended
+
+    CreateShowtimeRequest:
+      type: object
+      required:
+        - movie_id
+        - screen_id
+        - start_time
+        - pricing
+      properties:
+        movie_id:
+          type: string
+          pattern: "^MOV_[\\w-]+$"
+          maxLength: 100
+          description: ID of the movie to schedule
+          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+        screen_id:
+          type: string
+          pattern: "^SCR_[\\w-]+$"
+          maxLength: 100
+          description: ID of the screen where the movie will be shown
+          example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+        start_time:
+          type: string
+          format: date-time
+          description: Scheduled start time (ISO 8601 format)
+          example: "2025-12-20T19:30:00.000Z"
+        pricing:
+          type: number
+          format: double
+          minimum: 0
+          description: Ticket price (in IDR)
+          example: 50000
+
+    CreateShowtimeResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Showtime created successfully"
+        data:
+          type: object
+          required:
+            - id
+            - screen_name
+            - movie_title
+            - start_time
+            - end_time
+            - pricing
+            - status
+            - created_at
+          properties:
+            id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              description: Unique showtime identifier
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+            screen_name:
+              type: string
+              example: "Screen 1"
+            movie_title:
+              type: string
+              example: "The Matrix Resurrections"
+            start_time:
+              type: string
+              format: date-time
+              example: "2025-12-20T19:30:00.000Z"
+            end_time:
+              type: string
+              format: date-time
+              description: Calculated based on movie duration
+              example: "2025-12-20T21:58:00.000Z"
+            pricing:
+              type: number
+              example: 50000
+            status:
+              $ref: "#/components/schemas/ShowtimeStatus"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-17T10:30:00.000Z"
+
+    ShowtimeListItem:
+      type: object
+      required:
+        - id
+        - movie_id
+        - movie_title
+        - screen_id
+        - screen_name
+        - start_time
+        - end_time
+        - pricing
+        - status
+      properties:
+        id:
+          type: string
+          pattern: "^SHW_[\\w-]+$"
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        movie_id:
+          type: string
+          pattern: "^MOV_[\\w-]+$"
+          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+        movie_title:
+          type: string
+          example: "The Matrix Resurrections"
+        screen_id:
+          type: string
+          pattern: "^SCR_[\\w-]+$"
+          example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+        screen_name:
+          type: string
+          example: "Screen 1"
+        start_time:
+          type: string
+          format: date-time
+          example: "2025-12-20T19:30:00.000Z"
+        end_time:
+          type: string
+          format: date-time
+          example: "2025-12-20T21:58:00.000Z"
+        pricing:
+          type: number
+          example: 50000
+        status:
+          type: string
+          example: "SCHEDULED"
+
+    GetAllShowtimesResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - total_pages
+          allOf:
+            - $ref: "#/components/schemas/PaginationMeta"
+            - type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ShowtimeListItem"
+
+    GetShowtimeResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - movie_id
+            - movie_title
+            - screen_id
+            - screen_name
+            - start_time
+            - end_time
+            - pricing
+            - status
+            - created_at
+          properties:
+            id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+            movie_id:
+              type: string
+              pattern: "^MOV_[\\w-]+$"
+              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+            movie_title:
+              type: string
+              example: "The Matrix Resurrections"
+            screen_id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+            screen_name:
+              type: string
+              example: "Screen 1"
+            start_time:
+              type: string
+              format: date-time
+              example: "2025-12-20T19:30:00.000Z"
+            end_time:
+              type: string
+              format: date-time
+              example: "2025-12-20T21:58:00.000Z"
+            pricing:
+              type: number
+              example: 50000
+            status:
+              type: string
+              example: "SCHEDULED"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-17T10:30:00.000Z"
+
+    UpdateShowtimeRequest:
+      type: object
+      properties:
+        pricing:
+          type: number
+          format: double
+          minimum: 0
+          description: Updated ticket price
+          example: 55000
+        status:
+          $ref: "#/components/schemas/ShowtimeStatus"
+      description: At least one field must be provided
+
+    UpdateShowtimeResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Showtime updated successfully"
+        data:
+          type: object
+          required:
+            - id
+            - pricing
+            - status
+          properties:
+            id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+            pricing:
+              type: number
+              example: 55000
+            status:
+              type: string
+              example: "SCHEDULED"
+
+    DeleteShowtimeResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Showtime deleted successfully"
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+
+    # ==================== Booking Schemas ====================
+    BookingStatus:
+      type: string
+      enum:
+        - PENDING_PAYMENT
+        - PAYMENT_PROCESSING
+        - CONFIRMED
+        - CHECKED_IN
+        - CANCELLED
+        - EXPIRED
+      description: |
+        Current status of the booking:
+        - PENDING_PAYMENT: Booking created, waiting for payment initiation
+        - PAYMENT_PROCESSING: Payment initiated, waiting for confirmation
+        - CONFIRMED: Payment received, booking confirmed
+        - CHECKED_IN: Customer checked in at the cinema
+        - CANCELLED: Booking cancelled by customer or system
+        - EXPIRED: Booking expired due to payment timeout
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - showtime_id
+        - seat_ids
+      properties:
+        showtime_id:
+          type: string
+          pattern: "^SHW_[\\w-]+$"
+          maxLength: 100
+          description: ID of the showtime to book
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        seat_ids:
+          type: array
+          items:
+            type: string
+            maxLength: 20
+          minItems: 1
+          description: List of seat numbers to reserve (e.g., "A1", "A2", "B5")
+          example: ["A1", "A2", "A3"]
+
+    CreateBookingResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Booking created successfully"
+        data:
+          type: object
+          required:
+            - booking_id
+            - showtime_id
+            - seat_numbers
+            - ticket_count
+            - total_amount
+            - service_fee
+            - currency
+            - hold_expires_at
+            - status
+            - created_at
+          properties:
+            booking_id:
+              type: string
+              pattern: "^BKG_[\\w-]+$"
+              description: Unique booking identifier
+              example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+            showtime_id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+            seat_numbers:
+              type: array
+              items:
+                type: string
+              example: ["A1", "A2", "A3"]
+            ticket_count:
+              type: integer
+              minimum: 1
+              example: 3
+            total_amount:
+              type: number
+              description: Total amount including service fee (in IDR)
+              example: 165000
+            service_fee:
+              type: number
+              description: Service fee (in IDR)
+              example: 15000
+            currency:
+              type: string
+              example: "IDR"
+            hold_expires_at:
+              type: string
+              format: date-time
+              description: When the hold expires if payment not initiated
+              example: "2025-12-18T11:00:00.000Z"
+            status:
+              $ref: "#/components/schemas/BookingStatus"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-18T10:45:00.000Z"
+
+    BookingTicket:
+      type: object
+      required:
+        - seat_number
+        - ticket_code
+        - price
+        - status
+      properties:
+        seat_number:
+          type: string
+          description: Seat identifier
+          example: "A1"
+        ticket_code:
+          type: string
+          nullable: true
+          description: Unique ticket code (available after confirmation)
+          example: "TKT-ABC123XYZ"
+        price:
+          type: number
+          description: Ticket price (in IDR)
+          example: 50000
+        status:
+          type: string
+          description: Ticket status
+          example: "ACTIVE"
+
+    GetBookingResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Booking retrieved successfully"
+        data:
+          type: object
+          required:
+            - id
+            - customer_id
+            - showtime_id
+            - movie_title
+            - screen_name
+            - start_time
+            - end_time
+            - tickets
+            - status
+            - total_amount
+            - service_fee
+            - currency
+            - payment_url
+            - invoice_code
+            - created_at
+            - hold_expires_at
+            - confirmed_at
+            - checked_in_at
+          properties:
+            id:
+              type: string
+              pattern: "^BKG_[\\w-]+$"
+              example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+            customer_id:
+              type: string
+              pattern: "^USR_[\\w-]+$"
+              example: "USR_550e8400-e29b-41d4-a716-446655440000"
+            showtime_id:
+              type: string
+              pattern: "^SHW_[\\w-]+$"
+              example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+            movie_title:
+              type: string
+              example: "The Matrix Resurrections"
+            screen_name:
+              type: string
+              example: "Screen 1"
+            start_time:
+              type: string
+              format: date-time
+              example: "2025-12-20T19:30:00.000Z"
+            end_time:
+              type: string
+              format: date-time
+              example: "2025-12-20T21:58:00.000Z"
+            tickets:
+              type: array
+              items:
+                $ref: "#/components/schemas/BookingTicket"
+            status:
+              $ref: "#/components/schemas/BookingStatus"
+            total_amount:
+              type: number
+              example: 165000
+            service_fee:
+              type: number
+              example: 15000
+            currency:
+              type: string
+              example: "IDR"
+            payment_url:
+              type: string
+              nullable: true
+              format: uri
+              description: Payment gateway URL (available when PENDING_PAYMENT/PAYMENT_PROCESSING)
+              example: "https://checkout.xendit.co/invoice/abc123"
+            invoice_code:
+              type: string
+              nullable: true
+              description: Invoice code (available after payment)
+              example: "INV-2025-001234"
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-12-18T10:45:00.000Z"
+            hold_expires_at:
+              type: string
+              format: date-time
+              example: "2025-12-18T11:00:00.000Z"
+            confirmed_at:
+              type: string
+              format: date-time
+              nullable: true
+              description: When the booking was confirmed (payment received)
+              example: "2025-12-18T10:50:00.000Z"
+            checked_in_at:
+              type: string
+              format: date-time
+              nullable: true
+              description: When the customer checked in at the cinema
+              example: null
+
+    BookingListItem:
+      type: object
+      required:
+        - id
+        - showtime_id
+        - movie_title
+        - screen_name
+        - start_time
+        - seat_count
+        - status
+        - total_amount
+        - currency
+        - created_at
+      properties:
+        id:
+          type: string
+          pattern: "^BKG_[\\w-]+$"
+          example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+        showtime_id:
+          type: string
+          pattern: "^SHW_[\\w-]+$"
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        movie_title:
+          type: string
+          example: "The Matrix Resurrections"
+        screen_name:
+          type: string
+          example: "Screen 1"
+        start_time:
+          type: string
+          format: date-time
+          example: "2025-12-20T19:30:00.000Z"
+        seat_count:
+          type: integer
+          example: 3
+        status:
+          $ref: "#/components/schemas/BookingStatus"
+        total_amount:
+          type: number
+          example: 165000
+        currency:
+          type: string
+          example: "IDR"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-18T10:45:00.000Z"
+
+    GetAllBookingsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - total_pages
+          allOf:
+            - $ref: "#/components/schemas/PaginationMeta"
+            - type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/BookingListItem"
+
+    InitiatePaymentResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Payment initiated successfully"
+        data:
+          type: object
+          required:
+            - booking_id
+            - payment_url
+            - expires_at
+          properties:
+            booking_id:
+              type: string
+              pattern: "^BKG_[\\w-]+$"
+              example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+            payment_url:
+              type: string
+              format: uri
+              description: Payment gateway URL to redirect user
+              example: "https://checkout.xendit.co/invoice/abc123"
+            expires_at:
+              type: string
+              format: date-time
+              description: When the payment link expires
+              example: "2025-12-18T11:00:00.000Z"
+
+    CancelBookingResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Booking cancelled successfully"
+        data:
+          type: object
+          required:
+            - booking_id
+            - cancelled_at
+          properties:
+            booking_id:
+              type: string
+              pattern: "^BKG_[\\w-]+$"
+              example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+            cancelled_at:
+              type: string
+              format: date-time
+              example: "2025-12-18T10:55:00.000Z"
+
+    TicketDownloadType:
+      type: string
+      enum:
+        - qr_code
+        - invoice
+      description: |
+        Type of download:
+        - qr_code: QR code ticket for a specific seat
+        - invoice: PDF invoice for the entire booking
+
+    TicketDownloadResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Download link generated successfully"
+        data:
+          type: object
+          required:
+            - download_url
+            - expires_at
+          properties:
+            download_url:
+              type: string
+              format: uri
+              description: Pre-signed URL to download the ticket/invoice
+              example: "https://minio.example.com/bookings/tickets/abc123.pdf?signature=xyz"
+            expires_at:
+              type: string
+              format: date-time
+              description: When the download link expires
+              example: "2025-12-18T11:45:00.000Z"
+
+    XenditWebhookPayload:
+      type: object
+      required:
+        - id
+        - external_id
+        - status
+        - amount
+      properties:
+        id:
+          type: string
+          description: Xendit payment ID
+          example: "inv_abc123"
+        external_id:
+          type: string
+          description: Our booking ID
+          example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PAID
+            - SETTLED
+            - EXPIRED
+            - FAILED
+          example: "PAID"
+        payment_method:
+          type: string
+          description: Payment method used
+          example: "BANK_TRANSFER"
+        paid_at:
+          type: string
+          format: date-time
+          description: When the payment was completed
+          example: "2025-12-18T10:50:00.000Z"
+        amount:
+          type: number
+          description: Amount paid
+          example: 165000
+
+  parameters:
+    MovieIdPath:
+      name: movie_id
+      in: path
+      required: true
+      description: Unique movie identifier
+      schema:
+        type: string
+        pattern: "^MOV_[\\w-]+$"
+        maxLength: 100
+      example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+
+    ScreenIdPath:
+      name: screen_id
+      in: path
+      required: true
+      description: Unique screen identifier
+      schema:
+        type: string
+        pattern: "^SCR_[\\w-]+$"
+        maxLength: 100
+      example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+
+    ShowtimeIdPath:
+      name: showtime_id
+      in: path
+      required: true
+      description: Unique showtime identifier
+      schema:
+        type: string
+        pattern: "^SHW_[\\w-]+$"
+        maxLength: 100
+      example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+
+    BookingIdPath:
+      name: booking_id
+      in: path
+      required: true
+      description: Unique booking identifier
+      schema:
+        type: string
+        pattern: "^BKG_[\\w-]+$"
+        maxLength: 100
+      example: "BKG_550e8400-e29b-41d4-a716-446655440000"
+
+    PageQuery:
+      name: page
+      in: query
+      description: Page number for pagination (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    LimitQuery:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      example: 10
+
+    SearchQuery:
+      name: search
+      in: query
+      description: Search term for filtering results
+      schema:
+        type: string
+      example: "Matrix"
+
+    SortOrderQuery:
+      name: sort_order
+      in: query
+      description: Sort direction
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+      example: "asc"
+
+  responses:
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            validation_error:
+              summary: Validation Error
+              value:
+                message: "Validation failed"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies"
+                errors:
+                  title: "String must contain at most 100 character(s)"
+            invalid_email:
+              summary: Invalid Email Format
+              value:
+                message: "Invalid email format"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/auth/register"
+            invalid_password:
+              summary: Invalid Password Format
+              value:
+                message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/auth/register"
+            invalid_id_format:
+              summary: Invalid ID Format
+              value:
+                message: "Invalid movie ID format"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies/invalid-id"
+
+    Unauthorized:
+      description: Authentication required or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalid_credentials:
+              summary: Invalid Credentials
+              value:
+                message: "Invalid email or password"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/auth/login"
+            invalid_token:
+              summary: Invalid JWT Token
+              value:
+                message: "Invalid or malformed token"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies"
+            expired_token:
+              summary: Expired JWT Token
+              value:
+                message: "Token has expired"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies"
+            token_reuse:
+              summary: Token Reuse Detected
+              value:
+                message: "This refresh token has already been used. Please login again."
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/auth/refresh"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "You do not have permission to perform this action"
+            timestamp: "2025-12-17T10:30:00.000Z"
+            path: "/movies"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            movie_not_found:
+              summary: Movie Not Found
+              value:
+                message: 'Movie with ID "MOV_xxx" not found'
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies/MOV_xxx"
+            screen_not_found:
+              summary: Screen Not Found
+              value:
+                message: 'Screen with ID "SCR_xxx" not found'
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/screens/SCR_xxx"
+            showtime_not_found:
+              summary: Showtime Not Found
+              value:
+                message: 'Showtime with ID "SHW_xxx" not found'
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/showtimes/SHW_xxx"
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            email_exists:
+              summary: Email Already Exists
+              value:
+                message: "User with this email already exists"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/auth/register"
+            showtime_conflict:
+              summary: Showtime Conflict
+              value:
+                message: "The time slot conflicts with an existing showtime on this screen"
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/showtimes"
+
+paths:
+  # ==================== Authentication Endpoints ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Create a new customer account with email and password.
+
+        **Validation Rules:**
+        - `display_name`: 2-100 characters
+        - `email`: Valid email format, will be normalized to lowercase
+        - `password`: 8-100 characters, must contain lowercase, uppercase, number, and special character
+
+        **Business Rules:**
+        - Email must be unique across all users
+        - New users are assigned the CUSTOMER role by default
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: |
+        Authenticate a user with email and password.
+
+        **Returns:**
+        - `access_token`: Short-lived JWT for API authentication
+        - `refresh_token`: Long-lived JWT for obtaining new access tokens
+
+        **Token Lifetime:**
+        - Access tokens expire according to server configuration (typically 15 minutes)
+        - Refresh tokens expire after 7 days
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: |
+        Exchange a valid refresh token for new access and refresh tokens.
+
+        **Token Rotation:**
+        - Each refresh token can only be used once
+        - Using an already-rotated token will be detected as potential token theft
+        - Upon detection, all user sessions may be invalidated for security
+
+        **Security:**
+        - The old refresh token is invalidated immediately
+        - A new token pair is issued
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: |
+        Invalidate the current access token.
+
+        **Behavior:**
+        - The access token is added to a blacklist
+        - Subsequent requests with this token will be rejected
+      operationId: logoutUser
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: |
+        Retrieve the profile information of the currently authenticated user.
+
+        **Returns:**
+        - User's ID, display name, email, and role
+        - Registration and last login timestamps
+      operationId: getUserProfile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ==================== Movie Endpoints ====================
+  /movies:
+    get:
+      tags:
+        - Movies
+      summary: List all movies
+      description: |
+        Retrieve a paginated list of movies from the database.
+
+        **Permissions Required:** VIEW:MOVIE, VIEW_ALL:MOVIE, or MANAGE:MOVIE
+
+        **Filtering:**
+        - `search`: Search by movie title (case-insensitive partial match)
+        - `status`: Filter by movie status
+        - `genre`: Filter by genre (exact match)
+        - `release_year`: Filter by release year
+
+        **Sorting:**
+        - `sort_by`: title, releaseYear, createdAt, durationMinutes
+        - `sort_order`: asc or desc
+      operationId: getMovies
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/SortOrderQuery"
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - title
+              - releaseYear
+              - createdAt
+              - durationMinutes
+          example: "createdAt"
+        - name: status
+          in: query
+          description: Filter by movie status
+          schema:
+            $ref: "#/components/schemas/MovieStatus"
+        - name: genre
+          in: query
+          description: Filter by genre
+          schema:
+            type: string
+          example: "Action"
+        - name: release_year
+          in: query
+          description: Filter by release year
+          schema:
+            type: integer
+          example: 2021
+      responses:
+        "200":
+          description: List of movies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAllMoviesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags:
+        - Movies
+      summary: Create a new movie
+      description: |
+        Create a new movie entry manually with full details.
+
+        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+
+        **Validation Rules:**
+        - `title`: Maximum 100 characters
+        - `synopsis`: Maximum 1000 characters
+        - `duration_minutes`: Minimum 1 minute
+        - `genres`: Array of strings, each maximum 50 characters
+        - `certificate`: Must be one of SU, 13+, 17+, 21+
+        - `release_year`: Minimum 1000
+        - `poster_path`: Maximum 100 characters
+
+        **Business Rules:**
+        - New movies are created with status COMING_SOON
+        - The creating user is recorded as the creator
+      operationId: createMovie
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMovieRequest"
+      responses:
+        "201":
+          description: Movie created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateMovieResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /movies/search/external:
+    get:
+      tags:
+        - Movies
+      summary: Search movies from external provider
+      description: |
+        Search for movies from an external provider (TMDB).
+
+        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+
+        Use this endpoint to find movies to import into the system.
+        To import a movie, use the `POST /movies/sync` endpoint with the `external_id`.
+      operationId: searchExternalMovies
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: v
+          in: query
+          required: true
+          description: Search keyword
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 255
+          example: "Matrix"
+      responses:
+        "200":
+          description: Search results from external provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchExternalMoviesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /movies/sync:
+    post:
+      tags:
+        - Movies
+      summary: Sync movie from external provider
+      description: |
+        Import a movie from an external provider (TMDB) using its external ID.
+
+        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+
+        **Workflow:**
+        1. Search for movies using `GET /movies/search/external`
+        2. Get the `external_id` from the search results
+        3. Use this endpoint to import the movie into the database
+
+        **Business Rules:**
+        - Movie details are fetched from the external provider
+        - Duration and other metadata are automatically populated
+        - New movies are created with status COMING_SOON
+      operationId: syncMovie
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncMovieRequest"
+      responses:
+        "201":
+          description: Movie synced successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateMovieResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Movie not found in external provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: 'Movie with external ID "12345" not found'
+                timestamp: "2025-12-17T10:30:00.000Z"
+                path: "/movies/sync"
+
+  /movies/{movie_id}:
+    patch:
+      tags:
+        - Movies
+      summary: Change movie status
+      description: |
+        Update the status of an existing movie.
+
+        **Permissions Required:** MANAGE:MOVIE
+
+        **Valid Status Transitions:**
+        - COMING_SOON → NOW_SHOWING (when movie starts screening)
+        - NOW_SHOWING → ENDED_RUN (when movie run ends)
+        - Any status can transition to ENDED_RUN
+      operationId: changeMovieStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MovieIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMovieStatusRequest"
+      responses:
+        "200":
+          description: Movie status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangeMovieStatusResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - Movies
+      summary: Delete a movie
+      description: |
+        Soft delete a movie from the system.
+
+        **Permissions Required:** MANAGE:MOVIE
+
+        **Business Rules:**
+        - Movies are soft-deleted (marked as deleted, not physically removed)
+        - Deleted movies will not appear in listings
+        - Associated showtimes may be affected
+      operationId: deleteMovie
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MovieIdPath"
+      responses:
+        "200":
+          description: Movie deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteMovieResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Screen Endpoints ====================
+  /screens:
+    post:
+      tags:
+        - Screens
+      summary: Create a new screen
+      description: |
+        Create a new cinema screen with seat layout.
+
+        **Permissions Required:** CREATE:SCREEN or MANAGE:SCREEN
+
+        **Validation Rules:**
+        - `name`: 2-100 characters
+        - `rows`: At least one row required
+        - Each row `label`: 1-50 characters
+        - Each row `seat_count`: Minimum 1
+
+        **Business Rules:**
+        - Screen names should be unique (recommended but not enforced)
+        - Total capacity is calculated from the sum of all seat counts
+      operationId: createScreen
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScreenRequest"
+      responses:
+        "201":
+          description: Screen created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateScreenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /screens/{screen_id}:
+    patch:
+      tags:
+        - Screens
+      summary: Set screen layout
+      description: |
+        Update the seat layout of an existing screen.
+
+        **Permissions Required:** MANAGE:SCREEN
+
+        **Business Rules:**
+        - The entire seat layout is replaced
+        - Total capacity is recalculated
+        - Existing bookings for upcoming showtimes may be affected
+      operationId: setScreenLayout
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScreenIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetScreenLayoutRequest"
+      responses:
+        "200":
+          description: Screen layout updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetScreenLayoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - Screens
+      summary: Delete a screen
+      description: |
+        Soft delete a screen from the system.
+
+        **Permissions Required:** MANAGE:SCREEN
+
+        **Business Rules:**
+        - Screens are soft-deleted
+        - Screens with upcoming showtimes cannot be deleted (recommended validation)
+        - Deleted screens will not appear in listings
+      operationId: deleteScreen
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScreenIdPath"
+      responses:
+        "200":
+          description: Screen deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteScreenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Showtime Endpoints ====================
+  /showtimes:
+    get:
+      tags:
+        - Showtimes
+      summary: List all showtimes
+      description: |
+        Retrieve a paginated list of showtimes.
+
+        **Permissions Required:** VIEW:SHOWTIME, VIEW_ALL:SHOWTIME, or MANAGE:SHOWTIME
+
+        **Filtering:**
+        - `screen_id`: Filter by specific screen
+        - `movie_id`: Filter by specific movie
+        - `date`: Filter by date (YYYY-MM-DD format)
+        - `status`: Filter by showtime status
+
+        **Sorting:**
+        - `sort_by`: timeStart, createdAt, basePrice
+        - `sort_order`: asc or desc
+      operationId: getShowtimes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SortOrderQuery"
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - timeStart
+              - createdAt
+              - basePrice
+          example: "timeStart"
+        - name: screen_id
+          in: query
+          description: Filter by screen ID
+          schema:
+            type: string
+            pattern: "^SCR_[\\w-]+$"
+          example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+        - name: movie_id
+          in: query
+          description: Filter by movie ID
+          schema:
+            type: string
+            pattern: "^MOV_[\\w-]+$"
+          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+        - name: date
+          in: query
+          description: Filter by date
+          schema:
+            type: string
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          example: "2025-12-20"
+        - name: status
+          in: query
+          description: Filter by showtime status
+          schema:
+            $ref: "#/components/schemas/ShowtimeStatus"
+      responses:
+        "200":
+          description: List of showtimes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAllShowtimesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags:
+        - Showtimes
+      summary: Create a new showtime
+      description: |
+        Schedule a new movie showtime.
+
+        **Permissions Required:** CREATE:SHOWTIME or MANAGE:SHOWTIME
+
+        **Validation Rules:**
+        - `movie_id`: Must be a valid movie ID (format: MOV_xxx)
+        - `screen_id`: Must be a valid screen ID (format: SCR_xxx)
+        - `start_time`: ISO 8601 datetime format
+        - `pricing`: Minimum 0
+
+        **Business Rules:**
+        - The movie and screen must exist
+        - End time is automatically calculated based on movie duration
+        - Cannot create overlapping showtimes on the same screen
+        - New showtimes are created with status SCHEDULED
+      operationId: createShowtime
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShowtimeRequest"
+      responses:
+        "201":
+          description: Showtime created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateShowtimeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /showtimes/{showtime_id}:
+    get:
+      tags:
+        - Showtimes
+      summary: Get showtime details
+      description: |
+        Retrieve details of a specific showtime.
+
+        **Permissions Required:** VIEW:SHOWTIME, VIEW_ALL:SHOWTIME, or MANAGE:SHOWTIME
+      operationId: getShowtime
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowtimeIdPath"
+      responses:
+        "200":
+          description: Showtime details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetShowtimeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags:
+        - Showtimes
+      summary: Update showtime
+      description: |
+        Update showtime pricing or status.
+
+        **Permissions Required:** MANAGE:SHOWTIME
+
+        **Updatable Fields:**
+        - `pricing`: Update ticket price
+        - `status`: Update showtime status
+
+        **Valid Status Transitions:**
+        - SCHEDULED → CANCELLED (cancel a showtime)
+        - SCHEDULED → COMPLETED (mark as completed)
+      operationId: updateShowtime
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowtimeIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShowtimeRequest"
+      responses:
+        "200":
+          description: Showtime updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateShowtimeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - Showtimes
+      summary: Delete showtime
+      description: |
+        Soft delete a showtime from the system.
+
+        **Permissions Required:** MANAGE:SHOWTIME
+
+        **Business Rules:**
+        - Showtimes are soft-deleted
+        - Existing bookings for this showtime may need to be handled
+      operationId: deleteShowtime
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowtimeIdPath"
+      responses:
+        "200":
+          description: Showtime deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteShowtimeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Booking Endpoints ====================
+  /bookings:
+    get:
+      tags:
+        - Bookings
+      summary: Get user's bookings
+      description: |
+        Retrieve a paginated list of the current user's bookings.
+
+        **Permissions Required:** VIEW:BOOKING or MANAGE:BOOKING
+
+        **Sorting:**
+        - `sort_by`: createdAt, holdExpiresAt, status
+        - `sort_order`: asc or desc
+      operationId: getUserBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SortOrderQuery"
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - holdExpiresAt
+              - status
+          example: "createdAt"
+      responses:
+        "200":
+          description: List of user's bookings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAllBookingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags:
+        - Bookings
+      summary: Create a new booking
+      description: |
+        Create a new booking to reserve seats for a showtime.
+
+        **Permissions Required:** CREATE:BOOKING or MANAGE:BOOKING
+
+        **Validation Rules:**
+        - `showtime_id`: Must be a valid showtime ID (format: SHW_xxx)
+        - `seat_ids`: Array of seat numbers (e.g., ["A1", "A2"]), minimum 1
+
+        **Business Rules:**
+        - Seats must be available (not already booked)
+        - Creates a temporary hold on the seats
+        - Hold expires after 15 minutes if payment not initiated
+        - Total amount includes base ticket price + service fee
+        - Booking is created with status PENDING_PAYMENT
+      operationId: createBooking
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateBookingResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Showtime not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: 'Showtime with ID "SHW_xxx" not found'
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings"
+        "409":
+          description: Seats not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "One or more selected seats are not available"
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings"
+
+  /bookings/admin/all:
+    get:
+      tags:
+        - Bookings
+      summary: Get all bookings (Admin)
+      description: |
+        Retrieve a paginated list of all bookings in the system.
+
+        **Permissions Required:** VIEW_ALL:BOOKING or MANAGE:BOOKING
+
+        **Filtering:**
+        - `user_id`: Filter by customer ID
+        - `showtime_id`: Filter by showtime ID
+        - `status`: Filter by booking status
+
+        **Sorting:**
+        - `sort_by`: createdAt, holdExpiresAt, status
+        - `sort_order`: asc or desc
+      operationId: getAllBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SortOrderQuery"
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - holdExpiresAt
+              - status
+          example: "createdAt"
+        - name: user_id
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+            pattern: "^USR_[\\w-]+$"
+          example: "USR_550e8400-e29b-41d4-a716-446655440000"
+        - name: showtime_id
+          in: query
+          description: Filter by showtime ID
+          schema:
+            type: string
+            pattern: "^SHW_[\\w-]+$"
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        - name: status
+          in: query
+          description: Filter by booking status
+          schema:
+            $ref: "#/components/schemas/BookingStatus"
+      responses:
+        "200":
+          description: List of all bookings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAllBookingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /bookings/{booking_id}:
+    get:
+      tags:
+        - Bookings
+      summary: Get booking details
+      description: |
+        Retrieve details of a specific booking.
+
+        **Permissions Required:** VIEW:BOOKING, VIEW_ALL:BOOKING, or MANAGE:BOOKING
+
+        **Returns:**
+        - Full booking details including all tickets
+        - Payment URL (if payment pending)
+        - Invoice code (if confirmed)
+        - Status timestamps
+      operationId: getBooking
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdPath"
+      responses:
+        "200":
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBookingResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: 'Booking with ID "BKG_xxx" not found'
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings/BKG_xxx"
+
+  /bookings/{booking_id}/pay:
+    post:
+      tags:
+        - Bookings
+      summary: Initiate payment for booking
+      description: |
+        Initiate payment process for a pending booking.
+
+        **Permissions Required:** CREATE:BOOKING or MANAGE:BOOKING
+
+        **Business Rules:**
+        - Booking must be in PENDING_PAYMENT status
+        - Generates a payment URL from the payment gateway (Xendit)
+        - Updates booking status to PAYMENT_PROCESSING
+        - Payment link expires after 15 minutes
+
+        **Flow:**
+        1. Call this endpoint to get payment URL
+        2. Redirect user to payment URL
+        3. User completes payment on payment gateway
+        4. Webhook receives payment confirmation
+        5. Booking status updates to CONFIRMED
+      operationId: initiatePayment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdPath"
+      responses:
+        "200":
+          description: Payment initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitiatePaymentResponse"
+        "400":
+          description: Booking not in valid state for payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Booking is not in PENDING_PAYMENT status"
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings/BKG_xxx/pay"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /bookings/{booking_id}/cancel:
+    post:
+      tags:
+        - Bookings
+      summary: Cancel a booking
+      description: |
+        Cancel a booking and release reserved seats.
+
+        **Permissions Required:** CREATE:BOOKING or MANAGE:BOOKING
+
+        **Business Rules:**
+        - Only bookings in PENDING_PAYMENT, PAYMENT_PROCESSING, or CONFIRMED status can be cancelled
+        - Cancelled bookings cannot be reinstated
+        - Reserved seats are released back to inventory
+        - If payment was completed, refund may be processed separately
+
+        **Valid Cancellation States:**
+        - PENDING_PAYMENT → CANCELLED
+        - PAYMENT_PROCESSING → CANCELLED
+        - CONFIRMED → CANCELLED
+      operationId: cancelBooking
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdPath"
+      responses:
+        "200":
+          description: Booking cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelBookingResponse"
+        "400":
+          description: Booking cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Booking in CHECKED_IN status cannot be cancelled"
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings/BKG_xxx/cancel"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /bookings/{booking_id}/ticket/download:
+    get:
+      tags:
+        - Bookings
+      summary: Get ticket download link
+      description: |
+        Generate a pre-signed download URL for ticket or invoice.
+
+        **Permissions Required:** VIEW:BOOKING or MANAGE:BOOKING
+
+        **Download Types:**
+        - `qr_code`: QR code ticket for a specific seat (requires seat_number)
+        - `invoice`: PDF invoice for the entire booking
+
+        **Business Rules:**
+        - Booking must be in CONFIRMED or CHECKED_IN status
+        - Download links expire after 1 hour
+        - For QR code, the seat_number parameter is required
+      operationId: getTicketDownloadLink
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdPath"
+        - name: type
+          in: query
+          required: true
+          description: Type of download (qr_code or invoice)
+          schema:
+            $ref: "#/components/schemas/TicketDownloadType"
+        - name: seat_number
+          in: query
+          required: false
+          description: Seat number (required when type is qr_code)
+          schema:
+            type: string
+            maxLength: 20
+          example: "A1"
+      responses:
+        "200":
+          description: Download link generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDownloadResponse"
+        "400":
+          description: Invalid request (e.g., missing seat_number for qr_code)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "seat_number is required when type is qr_code"
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/bookings/BKG_xxx/ticket/download"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Webhook Endpoints ====================
+  /webhooks/xendit:
+    post:
+      tags:
+        - Webhooks
+      summary: Xendit payment webhook
+      description: |
+        Handle payment status updates from Xendit payment gateway.
+
+        **Security:**
+        - Webhook signature is verified using X-CALLBACK-TOKEN header
+        - Invalid signatures return 401 Unauthorized
+
+        **Payment Status Handling:**
+        - PAID/SETTLED: Booking confirmed, tickets generated, confirmation email sent
+        - EXPIRED: Booking marked as expired, seats released
+        - FAILED: Booking cancelled, seats released
+
+        **Note:** This endpoint is called by Xendit, not by the client application.
+      operationId: handleXenditWebhook
+      parameters:
+        - name: x-callback-token
+          in: header
+          required: true
+          description: Xendit callback token for signature verification
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XenditWebhookPayload"
+      responses:
+        "200":
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        "401":
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Invalid webhook signature"
+                timestamp: "2025-12-18T10:30:00.000Z"
+                path: "/webhooks/xendit"

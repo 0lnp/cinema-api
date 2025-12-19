@@ -18,4 +18,14 @@ export class SeatLayout {
 
     return new SeatLayout(rows, totalSeats);
   }
+
+  public getAllSeatNumbers(): string[] {
+    const seatNumbers: string[] = [];
+    for (const row of this.rows) {
+      for (let i = 1; i <= row.seatCount; i++) {
+        seatNumbers.push(`${row.label}${i}`);
+      }
+    }
+    return seatNumbers;
+  }
 }

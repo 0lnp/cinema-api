@@ -70,28 +70,39 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof InvariantError) {
       switch (exception.code) {
         case InvariantErrorCode.INVALID_EMAIL_FORMAT:
-          return {
-            status: HttpStatus.BAD_REQUEST,
-            message: exception.message,
-          };
         case InvariantErrorCode.INVALID_PASSWORD_FORMAT:
+        case InvariantErrorCode.BOOKING_MINIMUM_SEATS:
+        case InvariantErrorCode.SEAT_INVENTORY_EMPTY:
           return {
             status: HttpStatus.BAD_REQUEST,
             message: exception.message,
           };
         case InvariantErrorCode.ROTATION_NOT_PERMITTED:
-          return {
-            status: HttpStatus.FORBIDDEN,
-            message: exception.message,
-          };
         case InvariantErrorCode.REVOCATION_NOT_PERMITTED:
-          return {
-            status: HttpStatus.FORBIDDEN,
-            message: exception.message,
-          };
         case InvariantErrorCode.ROLE_ASSIGNMENT_FAILED:
           return {
             status: HttpStatus.FORBIDDEN,
+            message: exception.message,
+          };
+        case InvariantErrorCode.BOOKING_ALREADY_TERMINAL:
+        case InvariantErrorCode.BOOKING_CANNOT_EXPIRE:
+        case InvariantErrorCode.INVALID_BOOKING_TRANSITION:
+        case InvariantErrorCode.PAYMENT_NOT_INITIATED:
+        case InvariantErrorCode.TICKET_GENERATION_NOT_ALLOWED:
+        case InvariantErrorCode.TICKET_ALREADY_GENERATED:
+        case InvariantErrorCode.INVALID_SEAT_TRANSITION:
+        case InvariantErrorCode.TICKET_ALREADY_USED:
+        case InvariantErrorCode.TICKET_INVALID_STATUS:
+        case InvariantErrorCode.BOOKING_NOT_CONFIRMED:
+        case InvariantErrorCode.BOOKING_ALREADY_CHECKED_IN:
+          return {
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+            message: exception.message,
+          };
+        case InvariantErrorCode.SEAT_NOT_AVAILABLE:
+        case InvariantErrorCode.SEAT_NOT_HELD_BY_BOOKING:
+          return {
+            status: HttpStatus.CONFLICT,
             message: exception.message,
           };
         default:
@@ -108,6 +119,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           };
         case ApplicationErrorCode.VALIDATION_ERROR:
         case ApplicationErrorCode.INVALID_INPUT:
+        case ApplicationErrorCode.INVALID_REQUEST:
           return {
             status: HttpStatus.BAD_REQUEST,
             message: exception.message,
@@ -115,6 +127,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           };
         case ApplicationErrorCode.EMAIL_ALREADY_EXISTS:
         case ApplicationErrorCode.SHOWTIME_CONFLICT:
+        case ApplicationErrorCode.SEATS_NOT_AVAILABLE:
           return {
             status: HttpStatus.CONFLICT,
             message: exception.message,
@@ -123,13 +136,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         case ApplicationErrorCode.EXPIRED_JWT_TOKEN:
         case ApplicationErrorCode.TOKEN_REUSE_DETECTED:
         case ApplicationErrorCode.INVALID_REFRESH_TOKEN:
+        case ApplicationErrorCode.INVALID_WEBHOOK_SIGNATURE:
           return {
             status: HttpStatus.UNAUTHORIZED,
             message: exception.message,
           };
         case ApplicationErrorCode.RESOURCE_NOT_FOUND:
+        case ApplicationErrorCode.TICKET_NOT_GENERATED:
           return {
             status: HttpStatus.NOT_FOUND,
+            message: exception.message,
+          };
+        case ApplicationErrorCode.SHOWTIME_NOT_AVAILABLE:
+        case ApplicationErrorCode.SHOWTIME_IN_PAST:
+        case ApplicationErrorCode.INVALID_SEAT_SELECTION:
+        case ApplicationErrorCode.BOOKING_EXPIRED:
+        case ApplicationErrorCode.INVALID_BOOKING_STATE:
+          return {
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
             message: exception.message,
           };
         default:

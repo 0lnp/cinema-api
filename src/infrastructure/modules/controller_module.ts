@@ -6,6 +6,8 @@ import { PortModule } from "./port_module";
 import { RepositoryModule } from "./repository_module";
 import { MovieController } from "src/presentation/controllers/movie_controller";
 import { ShowtimeController } from "src/presentation/controllers/showtime_controller";
+import { BookingController } from "src/presentation/controllers/booking_controller";
+import { WebhookController } from "src/presentation/controllers/webhook_controller";
 
 @Module({
   imports: [ApplicationServiceModule, PortModule, RepositoryModule],
@@ -14,6 +16,8 @@ import { ShowtimeController } from "src/presentation/controllers/showtime_contro
     ScreenController,
     MovieController,
     ShowtimeController,
+    BookingController,
+    WebhookController,
   ],
 })
 export class ControllerModule {}

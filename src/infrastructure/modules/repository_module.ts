@@ -18,6 +18,12 @@ import { MovieORMEntity } from "../databases/orm_entities/movie_orm_entity";
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
 import { TypeormShowtimeRepository } from "../persistences/typeorm_showtime_repository";
 import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity";
+import { BookingRepository } from "src/domain/repositories/booking_repository";
+import { TypeormBookingRepository } from "../persistences/typeorm_booking_repository";
+import { BookingORMEntity } from "../databases/orm_entities/booking_orm_entity";
+import { SeatInventoryRepository } from "src/domain/repositories/seat_inventory_repository";
+import { TypeormSeatInventoryRepository } from "../persistences/typeorm_seat_inventory_repository";
+import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory_orm_entity";
 
 @Module({
   imports: [
@@ -34,6 +40,8 @@ import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity
       ScreenORMEntity,
       MovieORMEntity,
       ShowtimeORMEntity,
+      BookingORMEntity,
+      SeatInventoryORMEntity,
     ]),
   ],
   providers: [
@@ -57,6 +65,14 @@ import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity
       provide: ShowtimeRepository.name,
       useClass: TypeormShowtimeRepository,
     },
+    {
+      provide: BookingRepository.name,
+      useClass: TypeormBookingRepository,
+    },
+    {
+      provide: SeatInventoryRepository.name,
+      useClass: TypeormSeatInventoryRepository,
+    },
   ],
   exports: [
     UserRepository.name,
@@ -64,6 +80,8 @@ import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity
     ScreenRepository.name,
     MovieRepository.name,
     ShowtimeRepository.name,
+    BookingRepository.name,
+    SeatInventoryRepository.name,
   ],
 })
 export class RepositoryModule {}
