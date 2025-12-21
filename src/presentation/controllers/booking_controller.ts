@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   Param,
   Post,
@@ -141,6 +143,7 @@ export class BookingController {
     [PermissionAction.MANAGE, PermissionResource.BOOKING],
   )
   @Post(":booking_id/pay")
+  @HttpCode(HttpStatus.OK)
   async initiatePayment(
     @Request() req: TRequest,
     @Param(new ZodValidationPipe(PostBookingPaymentParamsDTOSchema))
@@ -160,6 +163,7 @@ export class BookingController {
     [PermissionAction.MANAGE, PermissionResource.BOOKING],
   )
   @Post(":booking_id/cancel")
+  @HttpCode(HttpStatus.OK)
   async cancelBooking(
     @Request() req: TRequest,
     @Param(new ZodValidationPipe(PostBookingCancelParamsDTOSchema))

@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   Post,
   Request,
@@ -50,6 +52,7 @@ export class AuthController {
   }
 
   @Post("login")
+  @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(LoginBodyDTOSchema))
   async postAuthLogin(@Body() body: LoginBodyDTO) {
     const request = AuthMapper.toLoginRequest(body);
@@ -58,6 +61,7 @@ export class AuthController {
   }
 
   @Post("refresh")
+  @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(RefreshBodyDTOSchema))
   async postAuthRefresh(@Body() body: RefreshBodyDTO) {
     const request = AuthMapper.toRefreshRequest(body);
@@ -67,6 +71,7 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Post("logout")
+  @HttpCode(HttpStatus.OK)
   async postAuthLogout(@Request() req: TRequest) {
     const result = await this.userLogoutService.execute({
       userID: req.user.id,
