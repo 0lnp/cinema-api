@@ -1,5 +1,4 @@
 import {
-  ChangeMovieStatusDTO,
   ChangeMovieStatusResult,
   CreateMovieDTO,
   CreateMovieResult,
@@ -13,7 +12,7 @@ import {
   PostMovieBodyDTO,
 } from "../dtos/movie_dto";
 import { BaseSuccessfulResponse } from "src/shared/types/base_successful_response";
-import { ReplaceFields } from "src/shared/types/replace_fields";
+import { ChangeMovieStatusDTO } from "src/application/dtos/movie_dto";
 
 export interface CreateResponse {
   id: string;
@@ -94,6 +93,7 @@ export class MovieMapper {
     result: GetAllMoviesResult,
   ): BaseSuccessfulResponse<GetAllMoviesResponse> {
     return {
+      message: "Movies retrieved successfully",
       data: {
         items: result.items.map((movie) => ({
           id: movie.id,
@@ -119,6 +119,7 @@ export class MovieMapper {
     result: SearchFromExternalResult,
   ): BaseSuccessfulResponse<SearchExternalResponse> {
     return {
+      message: "Movies searched successfully",
       data: {
         results: result.results.map((movie) => ({
           external_id: movie.externalID,
@@ -135,13 +136,7 @@ export class MovieMapper {
   public static toChangeStatusRequest(
     params: PatchMovieIDParamsDTO,
     body: PatchMovieIDBodyDTO,
-  ): ReplaceFields<
-    ChangeMovieStatusDTO,
-    {
-      movieID: string;
-      status: string;
-    }
-  > {
+  ): ChangeMovieStatusDTO {
     return {
       movieID: params.movie_id,
       status: body.status,

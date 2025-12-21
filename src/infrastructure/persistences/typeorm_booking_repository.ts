@@ -114,8 +114,8 @@ export class TypeormBookingRepository implements BookingRepository {
 
     const where: FindOptionsWhere<BookingORMEntity> = {};
 
-    if (filters?.userId) {
-      where.customerId = filters.userId.value;
+    if (filters?.customerId) {
+      where.customerId = filters.customerId.value;
     }
     if (filters?.showtimeId) {
       where.showtimeId = filters.showtimeId.value;

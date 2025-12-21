@@ -2,23 +2,18 @@ import { Inject } from "@nestjs/common";
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import {
   CreateScreenDTO,
-  CreateScreenDTOSchema,
   CreateScreenResult,
   DeleteScreenDTO,
-  DeleteScreenDTOSchema,
   DeleteScreenResult,
   SetScreenLayoutDTO,
-  SetScreenLayoutDTOSchema,
   SetScreenLayoutResult,
 } from "../dtos/screen_dto";
-import { validate } from "src/shared/utilities/validation";
 import { SeatLayout, SeatRow } from "src/domain/value_objects/seat_layout";
 import { Screen } from "src/domain/aggregates/screen";
 import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
-import { ReplaceFields } from "src/shared/types/replace_fields";
 
 export class ScreenApplicationService {
   public constructor(
@@ -27,10 +22,8 @@ export class ScreenApplicationService {
   ) {}
 
   public async create(request: CreateScreenDTO): Promise<CreateScreenResult> {
-    const dto = validate(CreateScreenDTOSchema, request);
-
     const seatRows: SeatRow[] = [];
-    dto.rows.forEach((row) => {
+    request.rows.forEach((row) => {
       seatRows.push({
         label: row.label,
         seatCount: row.seatCount,
@@ -42,9 +35,9 @@ export class ScreenApplicationService {
 
     const screen = Screen.create({
       id: screenID,
-      name: dto.name,
+      name: request.name,
       seatLayout,
-      createdBy: dto.createdBy,
+      createdBy: request.createdBy,
     });
 
     await this.screenRepository.save(screen);
@@ -60,20 +53,18 @@ export class ScreenApplicationService {
   }
 
   public async setLayout(
-    request: ReplaceFields<SetScreenLayoutDTO, { screenID: string }>,
+    request: SetScreenLayoutDTO,
   ): Promise<SetScreenLayoutResult> {
-    const dto = validate(SetScreenLayoutDTOSchema, request);
-
-    const screen = await this.screenRepository.screenOfID(dto.screenID);
+    const screen = await this.screenRepository.screenOfID(request.screenID);
     if (screen === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Screen with ID "${dto.screenID.value}" not found`,
+        message: `Screen with ID "${request.screenID.value}" not found`,
       });
     }
 
     const seatRows: SeatRow[] = [];
-    dto.rows.forEach((row) => {
+    request.rows.forEach((row) => {
       seatRows.push({
         label: row.label,
         seatCount: row.seatCount,
@@ -95,19 +86,17 @@ export class ScreenApplicationService {
   }
 
   public async deleteScreen(
-    request: ReplaceFields<DeleteScreenDTO, { screenID: string }>,
+    request: DeleteScreenDTO,
   ): Promise<DeleteScreenResult> {
-    const dto = validate(DeleteScreenDTOSchema, request);
-
-    const screen = await this.screenRepository.screenOfID(dto.screenID);
+    const screen = await this.screenRepository.screenOfID(request.screenID);
     if (screen === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Screen with ID "${dto.screenID.value}" not found`,
+        message: `Screen with ID "${request.screenID.value}" not found`,
       });
     }
 
-    screen.softDelete(dto.deletedBy);
+    screen.softDelete(request.deletedBy);
 
     await this.screenRepository.save(screen);
 

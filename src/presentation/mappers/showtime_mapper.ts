@@ -15,7 +15,6 @@ import {
   UpdateShowtimeDTO,
   UpdateShowtimeResult,
 } from "src/application/dtos/showtime_dto";
-import { ReplaceFields } from "src/shared/types/replace_fields";
 
 export interface CreateResponse {
   id: string;
@@ -72,14 +71,11 @@ export interface DeleteResponse {
 export class ShowtimeMapper {
   public static toCreateRequest(
     body: PostShowtimeBodyDTO,
-  ): ReplaceFields<
-    Omit<CreateShowtimeDTO, "createdBy">,
-    { movieID: string; screenID: string }
-  > {
+  ): Omit<CreateShowtimeDTO, "createdBy"> {
     return {
       movieID: body.movie_id,
       screenID: body.screen_id,
-      startTime: new Date(body.start_time),
+      startTime: body.start_time,
       pricing: body.pricing,
     };
   }
@@ -104,7 +100,7 @@ export class ShowtimeMapper {
 
   public static toGetRequest(
     params: GetShowtimeParamsDTO,
-  ): ReplaceFields<GetShowtimeDTO, { showtimeID: string }> {
+  ): GetShowtimeDTO {
     return {
       showtimeID: params.showtime_id,
     };
@@ -114,6 +110,7 @@ export class ShowtimeMapper {
     result: GetShowtimeResult,
   ): BaseSuccessfulResponse<GetResponse> {
     return {
+      message: "Showtime retrieved successfully",
       data: {
         id: result.id,
         movie_id: result.movieID,
@@ -133,6 +130,7 @@ export class ShowtimeMapper {
     result: GetAllShowtimesResult,
   ): BaseSuccessfulResponse<GetAllResponse> {
     return {
+      message: "Showtimes retrieved successfully",
       data: {
         items: result.items.map((showtime) => ({
           id: showtime.id,
@@ -156,7 +154,7 @@ export class ShowtimeMapper {
   public static toUpdateRequest(
     params: PatchShowtimeParamsDTO,
     body: PatchShowtimeBodyDTO,
-  ): ReplaceFields<UpdateShowtimeDTO, { showtimeID: string; status?: string }> {
+  ): UpdateShowtimeDTO {
     return {
       showtimeID: params.showtime_id,
       pricing: body?.pricing,

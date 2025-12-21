@@ -4,23 +4,12 @@ import { UserID } from "src/domain/value_objects/user_id";
 import { BookingStatus } from "src/domain/value_objects/booking_status";
 import { BookingSortField } from "src/domain/repositories/booking_repository";
 import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
-import * as z from "zod";
 
-export const CreateBookingDTOSchema = z.object({
-  customerId: z.instanceof(UserID),
-  showtimeId: z
-    .string()
-    .max(100)
-    .regex(/^SHW_[\w-]+$/, {
-      error: "Invalid showtime ID format",
-    })
-    .transform((value) => new ShowtimeID(value)),
-  seatNumbers: z
-    .array(z.string().max(20))
-    .min(1, { error: "At least one seat must be selected" }),
-});
-
-export type CreateBookingDTO = z.infer<typeof CreateBookingDTOSchema>;
+export interface CreateBookingDTO {
+  customerId: UserID;
+  showtimeId: ShowtimeID;
+  seatNumbers: string[];
+}
 
 export interface CreateBookingResult {
   message: string;
@@ -36,17 +25,9 @@ export interface CreateBookingResult {
   createdAt: Date;
 }
 
-export const GetBookingDTOSchema = z.object({
-  bookingId: z
-    .string()
-    .max(100)
-    .regex(/^BKG_[\w-]+$/, {
-      error: "Invalid booking ID format",
-    })
-    .transform((value) => new BookingID(value)),
-});
-
-export type GetBookingDTO = z.infer<typeof GetBookingDTOSchema>;
+export interface GetBookingDTO {
+  bookingId: BookingID;
+}
 
 export interface BookingTicketInfo {
   seatNumber: string;
@@ -56,6 +37,7 @@ export interface BookingTicketInfo {
 }
 
 export interface GetBookingResult {
+  message: string;
   id: string;
   customerId: string;
   showtimeId: string;
@@ -94,20 +76,14 @@ export interface BookingListItem {
   createdAt: Date;
 }
 
-export type GetUserBookingsResult = PaginatedResult<BookingListItem>;
+export type GetUserBookingsResult = PaginatedResult<BookingListItem> & {
+  message: string;
+};
 
-export const InitiatePaymentDTOSchema = z.object({
-  bookingId: z
-    .string()
-    .max(100)
-    .regex(/^BKG_[\w-]+$/, {
-      error: "Invalid booking ID format",
-    })
-    .transform((value) => new BookingID(value)),
-  customerId: z.instanceof(UserID),
-});
-
-export type InitiatePaymentDTO = z.infer<typeof InitiatePaymentDTOSchema>;
+export interface InitiatePaymentDTO {
+  bookingId: BookingID;
+  customerId: UserID;
+}
 
 export interface InitiatePaymentResult {
   message: string;
@@ -124,23 +100,16 @@ export interface HandlePaymentCallbackDTO {
 }
 
 export interface HandlePaymentCallbackResult {
+  message: string;
   success: boolean;
   bookingId: string;
   newStatus: string;
 }
 
-export const CancelBookingDTOSchema = z.object({
-  bookingId: z
-    .string()
-    .max(100)
-    .regex(/^BKG_[\w-]+$/, {
-      error: "Invalid booking ID format",
-    })
-    .transform((value) => new BookingID(value)),
-  customerId: z.instanceof(UserID),
-});
-
-export type CancelBookingDTO = z.infer<typeof CancelBookingDTOSchema>;
+export interface CancelBookingDTO {
+  bookingId: BookingID;
+  customerId: UserID;
+}
 
 export interface CancelBookingResult {
   message: string;
@@ -148,69 +117,34 @@ export interface CancelBookingResult {
   cancelledAt: Date;
 }
 
-export const GetTicketDownloadLinkDTOSchema = z
-  .object({
-    bookingId: z
-      .string()
-      .max(100)
-      .regex(/^BKG_[\w-]+$/, {
-        error: "Invalid booking ID format",
-      })
-      .transform((value) => new BookingID(value)),
-    customerId: z.instanceof(UserID),
-    type: z.enum(["qr_code", "invoice"]),
-    seatNumber: z.string().max(20).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.type === "qr_code") {
-        return data.seatNumber !== undefined;
-      }
-      return true;
-    },
-    {
-      error: 'seatNumber is required when type is "qr_code"',
-    },
-  );
-
-export type GetTicketDownloadLinkDTO = z.infer<
-  typeof GetTicketDownloadLinkDTOSchema
->;
+export interface GetTicketDownloadLinkDTO {
+  bookingId: BookingID;
+  customerId: UserID;
+  type: "qr_code" | "invoice";
+  seatNumber?: string | undefined;
+}
 
 export interface GetTicketDownloadLinkResult {
+  message: string;
   downloadUrl: string;
   expiresAt: Date;
 }
 
-export const GetAllBookingsDTOSchema = z.object({
-  customerId: z
-    .string()
-    .max(100)
-    .regex(/^USR_[\w-]+$/, {
-      error: "Invalid user ID format",
-    })
-    .transform((value) => new UserID(value))
-    .optional(),
-  showtimeId: z
-    .string()
-    .max(100)
-    .regex(/^SHW_[\w-]+$/, {
-      error: "Invalid showtime ID format",
-    })
-    .transform((value) => new ShowtimeID(value))
-    .optional(),
-  status: z.nativeEnum(BookingStatus).optional(),
-});
-
-export type GetAllBookingsFilters = z.infer<typeof GetAllBookingsDTOSchema>;
+export interface GetAllBookingsFilters {
+  customerId?: UserID;
+  showtimeId?: ShowtimeID;
+  status?: BookingStatus;
+}
 
 export interface GetAllBookingsRequest {
   query: PaginatedQuery<BookingSortField>;
   filters?: {
-    customerId?: string;
-    showtimeId?: string;
-    status?: string;
+    customerId?: UserID;
+    showtimeId?: ShowtimeID;
+    status?: BookingStatus;
   };
 }
 
-export type GetAllBookingsResult = PaginatedResult<BookingListItem>;
+export type GetAllBookingsResult = PaginatedResult<BookingListItem> & {
+  message: string;
+};

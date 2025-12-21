@@ -1,4 +1,4 @@
 export interface BaseSuccessfulResponse<T> {
-  message?: string;
+  message: string;
   data: T;
 }

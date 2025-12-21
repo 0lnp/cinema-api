@@ -16,34 +16,26 @@ import { BookingCreatedEvent } from "src/domain/events/booking_created_event";
 import { PaymentInitiatedEvent } from "src/domain/events/payment_initiated_event";
 import { BookingConfirmedEvent } from "src/domain/events/booking_confirmed_event";
 import { BookingCancelledEvent } from "src/domain/events/booking_cancelled_event";
-import { validate } from "src/shared/utilities/validation";
 import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
-import { ReplaceFields } from "src/shared/types/replace_fields";
 import {
   CancelBookingDTO,
-  CancelBookingDTOSchema,
   CancelBookingResult,
   CreateBookingDTO,
-  CreateBookingDTOSchema,
   CreateBookingResult,
   GetAllBookingsRequest,
   GetAllBookingsResult,
-  GetAllBookingsDTOSchema,
   GetBookingDTO,
-  GetBookingDTOSchema,
   GetBookingResult,
   GetTicketDownloadLinkDTO,
-  GetTicketDownloadLinkDTOSchema,
   GetTicketDownloadLinkResult,
   GetUserBookingsRequest,
   GetUserBookingsResult,
   HandlePaymentCallbackDTO,
   HandlePaymentCallbackResult,
   InitiatePaymentDTO,
-  InitiatePaymentDTOSchema,
   InitiatePaymentResult,
 } from "../dtos/booking_dto";
 import { ConfigService } from "@nestjs/config";
@@ -79,13 +71,8 @@ export class BookingApplicationService {
   ) {}
 
   public async createBooking(
-    request: ReplaceFields<
-      CreateBookingDTO,
-      { showtimeId: string; seatNumbers: string[] }
-    >,
+    dto: CreateBookingDTO,
   ): Promise<CreateBookingResult> {
-    const dto = validate(CreateBookingDTOSchema, request);
-
     const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeId);
     if (showtime === null) {
       throw new ApplicationError({
@@ -200,11 +187,7 @@ export class BookingApplicationService {
     };
   }
 
-  public async getBooking(
-    request: ReplaceFields<GetBookingDTO, { bookingId: string }>,
-  ): Promise<GetBookingResult> {
-    const dto = validate(GetBookingDTOSchema, request);
-
+  public async getBooking(dto: GetBookingDTO): Promise<GetBookingResult> {
     const booking = await this.bookingRepository.bookingOfID(dto.bookingId);
     if (booking === null) {
       throw new ApplicationError({
@@ -224,6 +207,7 @@ export class BookingApplicationService {
       : null;
 
     return {
+      message: "Booking retrieved successfully",
       id: booking.id.value,
       customerId: booking.customerId.value,
       showtimeId: booking.showtimeId.value,
@@ -251,11 +235,11 @@ export class BookingApplicationService {
   }
 
   public async getUserBookings(
-    request: GetUserBookingsRequest,
+    dto: GetUserBookingsRequest,
   ): Promise<GetUserBookingsResult> {
     const result = await this.bookingRepository.bookingsOfUser(
-      request.userId,
-      request.query,
+      dto.userId,
+      dto.query,
     );
 
     const showtimeIds = [
@@ -300,6 +284,7 @@ export class BookingApplicationService {
     );
 
     return {
+      message: "User bookings retrieved successfully",
       items: result.items.map((booking) => {
         const showtime = showtimeMap.get(booking.showtimeId.value);
         const movie = showtime
@@ -330,10 +315,8 @@ export class BookingApplicationService {
   }
 
   public async initiatePayment(
-    request: ReplaceFields<InitiatePaymentDTO, { bookingId: string }>,
+    dto: InitiatePaymentDTO,
   ): Promise<InitiatePaymentResult> {
-    const dto = validate(InitiatePaymentDTOSchema, request);
-
     const booking = await this.bookingRepository.bookingOfID(dto.bookingId);
     if (booking === null) {
       throw new ApplicationError({
@@ -464,6 +447,7 @@ export class BookingApplicationService {
     }
 
     return {
+      message: "Payment callback handled successfully",
       success: true,
       bookingId: booking.id.value,
       newStatus: booking.status,
@@ -471,10 +455,8 @@ export class BookingApplicationService {
   }
 
   public async cancelBooking(
-    request: ReplaceFields<CancelBookingDTO, { bookingId: string }>,
+    dto: CancelBookingDTO,
   ): Promise<CancelBookingResult> {
-    const dto = validate(CancelBookingDTOSchema, request);
-
     const booking = await this.bookingRepository.bookingOfID(dto.bookingId);
     if (booking === null) {
       throw new ApplicationError({
@@ -522,10 +504,8 @@ export class BookingApplicationService {
   }
 
   public async getTicketDownloadLink(
-    request: ReplaceFields<GetTicketDownloadLinkDTO, { bookingId: string }>,
+    dto: GetTicketDownloadLinkDTO,
   ): Promise<GetTicketDownloadLinkResult> {
-    const dto = validate(GetTicketDownloadLinkDTOSchema, request);
-
     const booking = await this.bookingRepository.bookingOfID(dto.bookingId);
     if (booking === null) {
       throw new ApplicationError({
@@ -587,23 +567,22 @@ export class BookingApplicationService {
 
     const downloadLink = await this.objectStorage.generatePresignedDownloadUrl(
       storagePath!,
-      60 * 60 * 1000, // 1 hour
+      60 * 60, // 1 hour in seconds
     );
 
     return {
+      message: "Download link generated successfully",
       downloadUrl: downloadLink.url,
       expiresAt: downloadLink.expiresAt,
     };
   }
 
   public async getAllBookings(
-    request: GetAllBookingsRequest,
+    dto: GetAllBookingsRequest,
   ): Promise<GetAllBookingsResult> {
-    const filtersDTO = validate(GetAllBookingsDTOSchema, request.filters ?? {});
-
     const result = await this.bookingRepository.allBookings(
-      request.query,
-      filtersDTO,
+      dto.query,
+      dto.filters,
     );
 
     const showtimeIds = [
@@ -648,6 +627,7 @@ export class BookingApplicationService {
     );
 
     return {
+      message: "Bookings retrieved successfully",
       items: result.items.map((booking) => {
         const showtime = showtimeMap.get(booking.showtimeId.value);
         const movie = showtime

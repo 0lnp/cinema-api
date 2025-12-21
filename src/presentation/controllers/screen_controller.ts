@@ -12,9 +12,13 @@ import {
 import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import {
   DeleteScreenParamsDTO,
+  DeleteScreenParamsDTOSchema,
   PatchScreenIDBodyDTO,
+  PatchScreenIDBodyDTOSchema,
   PatchScreenIDParamsDTO,
+  PatchScreenIDParamsDTOSchema,
   PostScreensBodyDTO,
+  PostScreensBodyDTOSchema,
 } from "../dtos/screen_dto";
 import { ScreenMapper } from "../mappers/screen_mapper";
 import { AuthGuard } from "../guards/auth_guard";
@@ -25,6 +29,7 @@ import {
 } from "src/domain/value_objects/permission";
 import { type Request as TRequest } from "express";
 import { PermissionsGuard } from "../guards/permissions_guard";
+import { ZodValidationPipe } from "../pipes/zod_validation_pipe";
 
 @Controller("screens")
 export class ScreenController {
@@ -41,7 +46,7 @@ export class ScreenController {
   @Post()
   async postScreens(
     @Request() req: TRequest,
-    @Body() body: PostScreensBodyDTO,
+    @Body(new ZodValidationPipe(PostScreensBodyDTOSchema)) body: PostScreensBodyDTO,
   ) {
     const dto = ScreenMapper.toCreateRequest(body);
     const result = await this.screenService.create({
@@ -55,8 +60,8 @@ export class ScreenController {
   @Permissions([PermissionAction.MANAGE, PermissionResource.SCREEN])
   @Patch(":screen_id")
   async patchScreenID(
-    @Param() params: PatchScreenIDParamsDTO,
-    @Body() body: PatchScreenIDBodyDTO,
+    @Param(new ZodValidationPipe(PatchScreenIDParamsDTOSchema)) params: PatchScreenIDParamsDTO,
+    @Body(new ZodValidationPipe(PatchScreenIDBodyDTOSchema)) body: PatchScreenIDBodyDTO,
   ) {
     const dto = ScreenMapper.toSetLayoutRequest(params, body);
     const result = await this.screenService.setLayout(dto);
@@ -68,7 +73,7 @@ export class ScreenController {
   @Delete(":screen_id")
   async deleteScreenID(
     @Request() req: TRequest,
-    @Param() params: DeleteScreenParamsDTO,
+    @Param(new ZodValidationPipe(DeleteScreenParamsDTOSchema)) params: DeleteScreenParamsDTO,
   ) {
     const result = await this.screenService.deleteScreen({
       screenID: params.screen_id,

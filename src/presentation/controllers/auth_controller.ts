@@ -6,9 +6,13 @@ import {
   Post,
   Request,
   UseGuards,
+  UsePipes,
 } from "@nestjs/common";
 import {
   RefreshBodyDTO,
+  RefreshBodyDTOSchema,
+  LoginBodyDTOSchema,
+  RegisterBodyDTOSchema,
   type LoginBodyDTO,
   type RegisterBodyDTO,
 } from "../dtos/auth_dto";
@@ -20,6 +24,7 @@ import { UserLogoutApplicationService } from "src/application/services/user_logo
 import { UserProfileApplicationService } from "src/application/services/user_profile_application_service";
 import { AuthGuard } from "../guards/auth_guard";
 import { type Request as TRequest } from "express";
+import { ZodValidationPipe } from "../pipes/zod_validation_pipe";
 
 @Controller("auth")
 export class AuthController {
@@ -37,6 +42,7 @@ export class AuthController {
   ) {}
 
   @Post("register")
+  @UsePipes(new ZodValidationPipe(RegisterBodyDTOSchema))
   async postAuthRegister(@Body() body: RegisterBodyDTO) {
     const request = AuthMapper.toRegisterRequest(body);
     const result = await this.userRegisterService.execute(request);
@@ -44,6 +50,7 @@ export class AuthController {
   }
 
   @Post("login")
+  @UsePipes(new ZodValidationPipe(LoginBodyDTOSchema))
   async postAuthLogin(@Body() body: LoginBodyDTO) {
     const request = AuthMapper.toLoginRequest(body);
     const result = await this.userLoginService.execute(request);
@@ -51,6 +58,7 @@ export class AuthController {
   }
 
   @Post("refresh")
+  @UsePipes(new ZodValidationPipe(RefreshBodyDTOSchema))
   async postAuthRefresh(@Body() body: RefreshBodyDTO) {
     const request = AuthMapper.toRefreshRequest(body);
     const result = await this.refreshTokenService.execute(request);
