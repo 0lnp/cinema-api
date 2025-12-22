@@ -8,7 +8,7 @@ import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
 export type BookingSortField = "createdAt" | "holdExpiresAt" | "status";
 
 export interface BookingSearchFilters {
-  userId?: UserID;
+  customerId?: UserID;
   showtimeId?: ShowtimeID;
   status?: BookingStatus;
 }

@@ -23,17 +23,25 @@ import {
 import { type Request as TRequest } from "express";
 import {
   DeleteMovieParamsDTO,
+  DeleteMovieParamsDTOSchema,
   GetMovieSearchExternalQueryDTO,
+  GetMovieSearchExternalQueryDTOSchema,
   GetMoviesQueryDTO,
+  GetMoviesQueryDTOSchema,
   PatchMovieIDBodyDTO,
+  PatchMovieIDBodyDTOSchema,
   PatchMovieIDParamsDTO,
+  PatchMovieIDParamsDTOSchema,
   PostMovieBodyDTO,
+  PostMovieBodyDTOSchema,
   PostMovieSyncBodyDTO,
+  PostMovieSyncBodyDTOSchema,
 } from "../dtos/movie_dto";
 import { MovieMapper } from "../mappers/movie_mapper";
 import { ParsePaginatedQueryPipe } from "../pipes/parse_paginated_query_pipe";
 import { MovieSortField } from "src/domain/repositories/movie_repository";
 import { PaginatedQuery } from "src/shared/types/pagination";
+import { ZodValidationPipe } from "../pipes/zod_validation_pipe";
 
 @Controller("movies")
 export class MovieController {
@@ -48,7 +56,10 @@ export class MovieController {
     [PermissionAction.MANAGE, PermissionResource.MOVIE],
   )
   @Post()
-  async postMovie(@Request() req: TRequest, @Body() body: PostMovieBodyDTO) {
+  async postMovie(
+    @Request() req: TRequest,
+    @Body(new ZodValidationPipe(PostMovieBodyDTOSchema)) body: PostMovieBodyDTO,
+  ) {
     const dto = MovieMapper.toCreateRequest(body);
     const result = await this.movieService.create({
       ...dto,
@@ -72,7 +83,9 @@ export class MovieController {
       "durationMinutes",
     ]),
   )
-  async getMovies(@Query() query: PaginatedQuery<MovieSortField>) {
+  async getMovies(
+    @Query(new ZodValidationPipe(GetMoviesQueryDTOSchema)) query: GetMoviesQueryDTO,
+  ) {
     const { status, genre, release_year, ...paginatedQuery } =
       query as PaginatedQuery<MovieSortField> & GetMoviesQueryDTO;
     const result = await this.movieService.getAllMovies({
@@ -92,7 +105,9 @@ export class MovieController {
     [PermissionAction.MANAGE, PermissionResource.MOVIE],
   )
   @Get("/search/external")
-  async getMovieSearchExternal(@Query() query: GetMovieSearchExternalQueryDTO) {
+  async getMovieSearchExternal(
+    @Query(new ZodValidationPipe(GetMovieSearchExternalQueryDTOSchema)) query: GetMovieSearchExternalQueryDTO,
+  ) {
     const result = await this.movieService.searchFromExternal({
       keyword: query.v,
     });
@@ -107,7 +122,7 @@ export class MovieController {
   @Post("sync")
   async syncMovies(
     @Request() req: TRequest,
-    @Body() body: PostMovieSyncBodyDTO,
+    @Body(new ZodValidationPipe(PostMovieSyncBodyDTOSchema)) body: PostMovieSyncBodyDTO,
   ) {
     const result = await this.movieService.createFromExternal({
       externalID: body.external_id,
@@ -120,8 +135,8 @@ export class MovieController {
   @Permissions([PermissionAction.MANAGE, PermissionResource.MOVIE])
   @Patch(":movie_id")
   async patchMovieID(
-    @Param() params: PatchMovieIDParamsDTO,
-    @Body() body: PatchMovieIDBodyDTO,
+    @Param(new ZodValidationPipe(PatchMovieIDParamsDTOSchema)) params: PatchMovieIDParamsDTO,
+    @Body(new ZodValidationPipe(PatchMovieIDBodyDTOSchema)) body: PatchMovieIDBodyDTO,
   ) {
     const dto = MovieMapper.toChangeStatusRequest(params, body);
     const result = await this.movieService.changeStatus(dto);
@@ -131,9 +146,9 @@ export class MovieController {
   @UseGuards(AuthGuard, PermissionsGuard)
   @Permissions([PermissionAction.MANAGE, PermissionResource.MOVIE])
   @Delete(":movie_id")
-  async deleteScreenID(
+  async deleteMovieID(
     @Request() req: TRequest,
-    @Param() params: DeleteMovieParamsDTO,
+    @Param(new ZodValidationPipe(DeleteMovieParamsDTOSchema)) params: DeleteMovieParamsDTO,
   ) {
     const result = await this.movieService.deleteMovie({
       deletedBy: req.user.id,

@@ -2,22 +2,16 @@ import { Inject } from "@nestjs/common";
 import { MovieRepository } from "src/domain/repositories/movie_repository";
 import {
   CreateShowtimeDTO,
-  CreateShowtimeDTOSchema,
   CreateShowtimeResult,
   DeleteShowtimeDTO,
-  DeleteShowtimeDTOSchema,
   DeleteShowtimeResult,
-  GetAllShowtimesDTOSchema,
   GetAllShowtimesRequest,
   GetAllShowtimesResult,
   GetShowtimeDTO,
-  GetShowtimeDTOSchema,
   GetShowtimeResult,
   UpdateShowtimeDTO,
-  UpdateShowtimeDTOSchema,
   UpdateShowtimeResult,
 } from "../dtos/showtime_dto";
-import { validate } from "src/shared/utilities/validation";
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import {
   ApplicationError,
@@ -26,7 +20,6 @@ import {
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
 import { Showtime } from "src/domain/aggregates/showtime";
 import { CurrencyCode, Money } from "src/domain/value_objects/money";
-import { ReplaceFields } from "src/shared/types/replace_fields";
 import { ShowtimeStatus } from "src/domain/value_objects/showtime_status";
 import { MovieID } from "src/domain/value_objects/movie_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
@@ -49,11 +42,9 @@ export class ShowtimeApplicationService {
   public async getAllShowtimes(
     request: GetAllShowtimesRequest,
   ): Promise<GetAllShowtimesResult> {
-    const filtersDTO = validate(GetAllShowtimesDTOSchema, request.filters);
-
     const result = await this.showtimeRepository.allShowtimes(
       request.query,
-      filtersDTO,
+      request.filters,
     );
 
     const movieIDs = [...new Set(result.items.map((s) => s.movieID.value))];
@@ -78,6 +69,7 @@ export class ShowtimeApplicationService {
     );
 
     return {
+      message: "Showtimes retrieved successfully",
       items: result.items.map((showtime) => ({
         id: showtime.id.value,
         movieID: showtime.movieID.value,
@@ -97,15 +89,13 @@ export class ShowtimeApplicationService {
   }
 
   public async getShowtime(
-    request: ReplaceFields<GetShowtimeDTO, { showtimeID: string }>,
+    request: GetShowtimeDTO,
   ): Promise<GetShowtimeResult> {
-    const dto = validate(GetShowtimeDTOSchema, request);
-
-    const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
+    const showtime = await this.showtimeRepository.showtimeOfID(request.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Showtime with ID "${dto.showtimeID.value}" not found`,
+        message: `Showtime with ID "${request.showtimeID.value}" not found`,
       });
     }
 
@@ -129,16 +119,11 @@ export class ShowtimeApplicationService {
   }
 
   public async createShowtime(
-    request: ReplaceFields<
-      CreateShowtimeDTO,
-      { movieID: string; screenID: string }
-    >,
+    request: CreateShowtimeDTO,
   ): Promise<CreateShowtimeResult> {
-    const dto = validate(CreateShowtimeDTOSchema, request);
-
     const [movie, screen, showtimeID] = await Promise.all([
-      this.movieRepository.movieOfID(dto.movieID),
-      this.screenRepository.screenOfID(dto.screenID),
+      this.movieRepository.movieOfID(request.movieID),
+      this.screenRepository.screenOfID(request.screenID),
       this.showtimeRepository.nextIdentity(),
     ]);
     if (movie === null || screen === null) {
@@ -152,16 +137,16 @@ export class ShowtimeApplicationService {
       id: showtimeID,
       movieID: movie.id,
       screenID: screen.id,
-      startTime: dto.startTime,
+      startTime: request.startTime,
       durationMinutes: movie.durationMinutes,
-      pricing: Money.create(dto.pricing, CurrencyCode.IDR),
-      createdBy: dto.createdBy,
+      pricing: Money.create(request.pricing, CurrencyCode.IDR),
+      createdBy: request.createdBy,
     });
 
     const existingShowtimes =
       await this.showtimeRepository.showtimeOfScreenAndDate(
         screen.id,
-        dto.startTime.toISOString().split("T")[0]!,
+        request.startTime.toISOString().split("T")[0]!,
       );
 
     for (const existing of existingShowtimes) {
@@ -202,34 +187,29 @@ export class ShowtimeApplicationService {
   }
 
   public async updateShowtime(
-    request: ReplaceFields<
-      UpdateShowtimeDTO,
-      { showtimeID: string; status?: string }
-    >,
+    request: UpdateShowtimeDTO,
   ): Promise<UpdateShowtimeResult> {
-    const dto = validate(UpdateShowtimeDTOSchema, request);
-
-    if (dto.pricing === undefined && dto.status === undefined) {
+    if (request.pricing === undefined && request.status === undefined) {
       throw new ApplicationError({
         code: ApplicationErrorCode.INVALID_INPUT,
         message: "At least one field (pricing or status) must be provided",
       });
     }
 
-    const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
+    const showtime = await this.showtimeRepository.showtimeOfID(request.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Showtime with ID "${dto.showtimeID.value}" not found`,
+        message: `Showtime with ID "${request.showtimeID.value}" not found`,
       });
     }
 
-    if (dto.pricing !== undefined) {
-      showtime.updatePricing(Money.create(dto.pricing, CurrencyCode.IDR));
+    if (request.pricing !== undefined) {
+      showtime.updatePricing(Money.create(request.pricing, CurrencyCode.IDR));
     }
 
-    if (dto.status !== undefined) {
-      switch (dto.status) {
+    if (request.status !== undefined) {
+      switch (request.status) {
         case ShowtimeStatus.CANCELLED:
           showtime.cancel();
           break;
@@ -250,19 +230,17 @@ export class ShowtimeApplicationService {
   }
 
   public async deleteShowtime(
-    request: ReplaceFields<DeleteShowtimeDTO, { showtimeID: string }>,
+    request: DeleteShowtimeDTO,
   ): Promise<DeleteShowtimeResult> {
-    const dto = validate(DeleteShowtimeDTOSchema, request);
-
-    const showtime = await this.showtimeRepository.showtimeOfID(dto.showtimeID);
+    const showtime = await this.showtimeRepository.showtimeOfID(request.showtimeID);
     if (showtime === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Showtime with ID "${dto.showtimeID.value}" not found`,
+        message: `Showtime with ID "${request.showtimeID.value}" not found`,
       });
     }
 
-    showtime.softDelete(dto.deletedBy);
+    showtime.softDelete(request.deletedBy);
 
     await this.showtimeRepository.save(showtime);
 

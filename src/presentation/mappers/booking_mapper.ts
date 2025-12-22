@@ -1,6 +1,5 @@
 import { type BaseSuccessfulResponse } from "src/shared/types/base_successful_response";
 import {
-  GetBookingParamsDTO,
   PostBookingBodyDTO,
   PostBookingCancelParamsDTO,
   PostBookingPaymentParamsDTO,
@@ -12,7 +11,6 @@ import {
   CancelBookingResult,
   CreateBookingResult,
   GetAllBookingsResult,
-  GetBookingDTO,
   GetBookingResult,
   GetTicketDownloadLinkDTO,
   GetTicketDownloadLinkResult,
@@ -20,7 +18,7 @@ import {
   InitiatePaymentDTO,
   InitiatePaymentResult,
 } from "src/application/dtos/booking_dto";
-import { ReplaceFields } from "src/shared/types/replace_fields";
+import { ShowtimeID } from "src/domain/value_objects/showtime_id";
 
 export interface CreateBookingResponse {
   booking_id: string;
@@ -102,7 +100,7 @@ export interface TicketDownloadLinkResponse {
 
 export class BookingMapper {
   public static toCreateRequest(body: PostBookingBodyDTO): {
-    showtimeId: string;
+    showtimeId: ShowtimeID;
     seatNumbers: string[];
   } {
     return {
@@ -128,14 +126,6 @@ export class BookingMapper {
         status: result.status,
         created_at: result.createdAt.toISOString(),
       },
-    };
-  }
-
-  public static toGetRequest(
-    params: GetBookingParamsDTO,
-  ): ReplaceFields<GetBookingDTO, { bookingId: string }> {
-    return {
-      bookingId: params.booking_id,
     };
   }
 
@@ -174,33 +164,33 @@ export class BookingMapper {
 
   public static toGetAllResponse(
     result: GetAllBookingsResult | GetUserBookingsResult,
-  ): GetAllBookingsResponse {
+  ): BaseSuccessfulResponse<GetAllBookingsResponse> {
     return {
-      items: result.items.map((item) => ({
-        id: item.id,
-        showtime_id: item.showtimeId,
-        movie_title: item.movieTitle,
-        screen_name: item.screenName,
-        start_time: item.startTime.toISOString(),
-        seat_count: item.seatCount,
-        status: item.status,
-        total_amount: item.totalAmount,
-        currency: item.currency,
-        created_at: item.createdAt.toISOString(),
-      })),
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      total_pages: result.totalPages,
+      message: "Bookings retrieved successfully",
+      data: {
+        items: result.items.map((item) => ({
+          id: item.id,
+          showtime_id: item.showtimeId,
+          movie_title: item.movieTitle,
+          screen_name: item.screenName,
+          start_time: item.startTime.toISOString(),
+          seat_count: item.seatCount,
+          status: item.status,
+          total_amount: item.totalAmount,
+          currency: item.currency,
+          created_at: item.createdAt.toISOString(),
+        })),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        total_pages: result.totalPages,
+      },
     };
   }
 
   public static toInitiatePaymentRequest(
     params: PostBookingPaymentParamsDTO,
-  ): ReplaceFields<
-    Omit<InitiatePaymentDTO, "customerId">,
-    { bookingId: string }
-  > {
+  ): Omit<InitiatePaymentDTO, "customerId"> {
     return {
       bookingId: params.booking_id,
     };
@@ -221,10 +211,7 @@ export class BookingMapper {
 
   public static toCancelRequest(
     params: PostBookingCancelParamsDTO,
-  ): ReplaceFields<
-    Omit<CancelBookingDTO, "customerId">,
-    { bookingId: string }
-  > {
+  ): Omit<CancelBookingDTO, "customerId"> {
     return {
       bookingId: params.booking_id,
     };
@@ -245,10 +232,7 @@ export class BookingMapper {
   public static toTicketDownloadRequest(
     params: GetTicketDownloadParamsDTO,
     query: GetTicketDownloadQueryDTO,
-  ): ReplaceFields<
-    Omit<GetTicketDownloadLinkDTO, "customerId">,
-    { bookingId: string }
-  > {
+  ): Omit<GetTicketDownloadLinkDTO, "customerId"> {
     return {
       bookingId: params.booking_id,
       type: query.type,

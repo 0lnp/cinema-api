@@ -1,22 +1,15 @@
-import { validate } from "src/shared/utilities/validation";
 import {
   ChangeMovieStatusDTO,
-  ChangeMovieStatusDTOSchema,
   ChangeMovieStatusResult,
   CreateFromExternalDTO,
-  CreateFromExternalDTOSchema,
   CreateMovieDTO,
-  CreateMovieDTOSchema,
   CreateMovieResult,
   DeleteMovieDTO,
-  DeleteMovieDTOSchema,
   DeleteMovieResult,
-  GetAllMoviesDTOSchema,
   GetAllMoviesRequest,
   GetAllMoviesResult,
   MovieListItem,
   SearchFromExternalDTO,
-  SearchFromExternalDTOSchema,
   SearchFromExternalResult,
 } from "../dtos/movie_dto";
 import { MovieRepository } from "src/domain/repositories/movie_repository";
@@ -27,7 +20,6 @@ import {
   ApplicationError,
   ApplicationErrorCode,
 } from "src/shared/exceptions/application_error";
-import { ReplaceFields } from "src/shared/types/replace_fields";
 import { MovieProvider } from "src/domain/ports/movie_provider";
 import { ConfigService } from "@nestjs/config";
 import { AppConfig } from "src/infrastructure/configs/app_config";
@@ -48,14 +40,13 @@ export class MovieApplicationService {
   public async getAllMovies(
     request: GetAllMoviesRequest,
   ): Promise<GetAllMoviesResult> {
-    const filtersDTO = validate(GetAllMoviesDTOSchema, request.filters);
-
     const result = await this.movieRepository.allMovies(
       request.query,
-      filtersDTO,
+      request.filters,
     );
 
     return {
+      message: "Movies retrieved successfully",
       items: this.mapAllMovieListItems(result.items),
       total: result.total,
       page: result.page,
@@ -65,12 +56,10 @@ export class MovieApplicationService {
   }
 
   public async create(request: CreateMovieDTO): Promise<CreateMovieResult> {
-    const dto = validate(CreateMovieDTOSchema, request);
-
     const movieID = await this.movieRepository.nextIdentity();
 
     const movie = Movie.create({
-      ...dto,
+      ...request,
       id: movieID,
     });
 
@@ -87,8 +76,7 @@ export class MovieApplicationService {
   public async searchFromExternal(
     request: SearchFromExternalDTO,
   ): Promise<SearchFromExternalResult> {
-    const dto = validate(SearchFromExternalDTOSchema, request);
-    const searchResult = await this.movieProvider.searchMovie(dto.keyword);
+    const searchResult = await this.movieProvider.searchMovie(request.keyword);
 
     return {
       results: searchResult.results.map((movie) => ({
@@ -104,16 +92,14 @@ export class MovieApplicationService {
   public async createFromExternal(
     request: CreateFromExternalDTO,
   ): Promise<CreateMovieResult> {
-    const dto = validate(CreateFromExternalDTOSchema, request);
-
     const movie = await this.movieSyncService.syncMovie(
-      dto.externalID,
-      dto.createdBy,
+      request.externalID,
+      request.createdBy,
     );
     if (movie === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Movie with external ID "${dto.externalID}" not found"`,
+        message: `Movie with external ID "${request.externalID}" not found"`,
       });
     }
 
@@ -128,22 +114,17 @@ export class MovieApplicationService {
   }
 
   public async changeStatus(
-    request: ReplaceFields<
-      ChangeMovieStatusDTO,
-      { movieID: string; status: string }
-    >,
+    request: ChangeMovieStatusDTO,
   ): Promise<ChangeMovieStatusResult> {
-    const dto = validate(ChangeMovieStatusDTOSchema, request);
-
-    const movie = await this.movieRepository.movieOfID(dto.movieID);
+    const movie = await this.movieRepository.movieOfID(request.movieID);
     if (movie === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Movie with ID "${dto.movieID.value}" not found`,
+        message: `Movie with ID "${request.movieID.value}" not found`,
       });
     }
 
-    movie.changeStatus(dto.status);
+    movie.changeStatus(request.status);
     await this.movieRepository.save(movie);
 
     return {
@@ -154,19 +135,17 @@ export class MovieApplicationService {
   }
 
   public async deleteMovie(
-    request: ReplaceFields<DeleteMovieDTO, { movieID: string }>,
+    request: DeleteMovieDTO,
   ): Promise<DeleteMovieResult> {
-    const dto = validate(DeleteMovieDTOSchema, request);
-
-    const movie = await this.movieRepository.movieOfID(dto.movieID);
+    const movie = await this.movieRepository.movieOfID(request.movieID);
     if (movie === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: `Movie with ID "${dto.movieID.value}" not found`,
+        message: `Movie with ID "${request.movieID.value}" not found`,
       });
     }
 
-    movie.softDelete(dto.deletedBy);
+    movie.softDelete(request.deletedBy);
 
     await this.movieRepository.save(movie);
 

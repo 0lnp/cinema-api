@@ -102,6 +102,7 @@ export class AuthMapper {
     result: UserProfileResult,
   ): BaseSuccessfulResponse<ProfileResponse> {
     return {
+      message: "Profile retrieved successfully",
       data: {
         id: result.id,
         display_name: result.displayName,

@@ -1,4 +1,5 @@
 export interface BaseSuccessfulResponse<T> {
-  message?: string;
+  status_code?: number;
+  message: string;
   data: T;
 }

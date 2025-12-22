@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   Param,
   Post,
@@ -21,17 +23,25 @@ import {
 import { type Request as TRequest } from "express";
 import {
   GetBookingParamsDTO,
+  GetBookingParamsDTOSchema,
   GetBookingsQueryDTO,
+  GetBookingsQueryDTOSchema,
   GetTicketDownloadParamsDTO,
+  GetTicketDownloadParamsDTOSchema,
   GetTicketDownloadQueryDTO,
+  GetTicketDownloadQueryDTOSchema,
   PostBookingBodyDTO,
+  PostBookingBodyDTOSchema,
   PostBookingCancelParamsDTO,
+  PostBookingCancelParamsDTOSchema,
   PostBookingPaymentParamsDTO,
+  PostBookingPaymentParamsDTOSchema,
 } from "../dtos/booking_dto";
 import { BookingMapper } from "../mappers/booking_mapper";
 import { ParsePaginatedQueryPipe } from "../pipes/parse_paginated_query_pipe";
 import { BookingSortField } from "src/domain/repositories/booking_repository";
 import { PaginatedQuery } from "src/shared/types/pagination";
+import { ZodValidationPipe } from "../pipes/zod_validation_pipe";
 
 @Controller("bookings")
 export class BookingController {
@@ -48,7 +58,8 @@ export class BookingController {
   @Post()
   async createBooking(
     @Request() req: TRequest,
-    @Body() body: PostBookingBodyDTO,
+    @Body(new ZodValidationPipe(PostBookingBodyDTOSchema))
+    body: PostBookingBodyDTO,
   ) {
     const dto = BookingMapper.toCreateRequest(body);
     const result = await this.bookingService.createBooking({
@@ -65,9 +76,13 @@ export class BookingController {
     [PermissionAction.MANAGE, PermissionResource.BOOKING],
   )
   @Get(":booking_id")
-  async getBooking(@Param() params: GetBookingParamsDTO) {
-    const dto = BookingMapper.toGetRequest(params);
-    const result = await this.bookingService.getBooking(dto);
+  async getBooking(
+    @Param(new ZodValidationPipe(GetBookingParamsDTOSchema))
+    params: GetBookingParamsDTO,
+  ) {
+    const result = await this.bookingService.getBooking({
+      bookingId: params.booking_id,
+    });
     return BookingMapper.toGetResponse(result);
   }
 
@@ -106,7 +121,9 @@ export class BookingController {
       "status",
     ]),
   )
-  async getAllBookings(@Query() query: any) {
+  async getAllBookings(
+    @Query(new ZodValidationPipe(GetBookingsQueryDTOSchema)) query: any,
+  ) {
     const { user_id, showtime_id, status, ...paginatedQuery } =
       query as PaginatedQuery<BookingSortField> & GetBookingsQueryDTO;
     const result = await this.bookingService.getAllBookings({
@@ -126,9 +143,11 @@ export class BookingController {
     [PermissionAction.MANAGE, PermissionResource.BOOKING],
   )
   @Post(":booking_id/pay")
+  @HttpCode(HttpStatus.OK)
   async initiatePayment(
     @Request() req: TRequest,
-    @Param() params: PostBookingPaymentParamsDTO,
+    @Param(new ZodValidationPipe(PostBookingPaymentParamsDTOSchema))
+    params: PostBookingPaymentParamsDTO,
   ) {
     const dto = BookingMapper.toInitiatePaymentRequest(params);
     const result = await this.bookingService.initiatePayment({
@@ -144,9 +163,11 @@ export class BookingController {
     [PermissionAction.MANAGE, PermissionResource.BOOKING],
   )
   @Post(":booking_id/cancel")
+  @HttpCode(HttpStatus.OK)
   async cancelBooking(
     @Request() req: TRequest,
-    @Param() params: PostBookingCancelParamsDTO,
+    @Param(new ZodValidationPipe(PostBookingCancelParamsDTOSchema))
+    params: PostBookingCancelParamsDTO,
   ) {
     const dto = BookingMapper.toCancelRequest(params);
     const result = await this.bookingService.cancelBooking({
@@ -164,8 +185,10 @@ export class BookingController {
   @Get(":booking_id/ticket/download")
   async getTicketDownload(
     @Request() req: TRequest,
-    @Param() params: GetTicketDownloadParamsDTO,
-    @Query() query: GetTicketDownloadQueryDTO,
+    @Param(new ZodValidationPipe(GetTicketDownloadParamsDTOSchema))
+    params: GetTicketDownloadParamsDTO,
+    @Query(new ZodValidationPipe(GetTicketDownloadQueryDTOSchema))
+    query: GetTicketDownloadQueryDTO,
   ) {
     const dto = BookingMapper.toTicketDownloadRequest(params, query);
     const result = await this.bookingService.getTicketDownloadLink({
