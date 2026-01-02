@@ -1,5 +1,5 @@
 import { Inject } from "@nestjs/common";
-import { MovieRepository } from "src/domain/repositories/movie_repository";
+import { EventRepository } from "src/domain/repositories/event_repository";
 import {
   CreateShowtimeDTO,
   CreateShowtimeResult,
@@ -21,22 +21,24 @@ import { ShowtimeRepository } from "src/domain/repositories/showtime_repository"
 import { Showtime } from "src/domain/aggregates/showtime";
 import { CurrencyCode, Money } from "src/domain/value_objects/money";
 import { ShowtimeStatus } from "src/domain/value_objects/showtime_status";
-import { MovieID } from "src/domain/value_objects/movie_id";
+import { EventID } from "src/domain/value_objects/event_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
 import { DomainEventPublisher } from "src/domain/ports/domain_event_publisher";
 import { ShowtimeScheduledEvent } from "src/domain/events/showtime_scheduled_event";
-import { MovieStatus } from "src/domain/value_objects/movie_status";
+import { UnitOfWork } from "src/domain/ports/unit_of_work";
 
 export class ShowtimeApplicationService {
   public constructor(
-    @Inject(MovieRepository.name)
-    private readonly movieRepository: MovieRepository,
+    @Inject(EventRepository.name)
+    private readonly eventRepository: EventRepository,
     @Inject(ScreenRepository.name)
     private readonly screenRepository: ScreenRepository,
     @Inject(ShowtimeRepository.name)
     private readonly showtimeRepository: ShowtimeRepository,
     @Inject(DomainEventPublisher.name)
     private readonly eventPublisher: DomainEventPublisher,
+    @Inject(UnitOfWork.name)
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   public async getAllShowtimes(
@@ -47,12 +49,12 @@ export class ShowtimeApplicationService {
       request.filters,
     );
 
-    const movieIDs = [...new Set(result.items.map((s) => s.movieID.value))];
+    const eventIDs = [...new Set(result.items.map((s) => s.eventID.value))];
     const screenIDs = [...new Set(result.items.map((s) => s.screenID.value))];
 
-    const [movies, screens] = await Promise.all([
+    const [events, screens] = await Promise.all([
       Promise.all(
-        movieIDs.map((id) => this.movieRepository.movieOfID(new MovieID(id))),
+        eventIDs.map((id) => this.eventRepository.eventOfID(new EventID(id))),
       ),
       Promise.all(
         screenIDs.map((id) =>
@@ -61,8 +63,8 @@ export class ShowtimeApplicationService {
       ),
     ]);
 
-    const movieMap = new Map(
-      movies.filter((m) => m !== null).map((m) => [m!.id.value, m!]),
+    const eventMap = new Map(
+      events.filter((e) => e !== null).map((e) => [e!.id.value, e!]),
     );
     const screenMap = new Map(
       screens.filter((s) => s !== null).map((s) => [s!.id.value, s!]),
@@ -72,8 +74,8 @@ export class ShowtimeApplicationService {
       message: "Showtimes retrieved successfully",
       items: result.items.map((showtime) => ({
         id: showtime.id.value,
-        movieID: showtime.movieID.value,
-        movieTitle: movieMap.get(showtime.movieID.value)?.title ?? "Unknown",
+        eventID: showtime.eventID.value,
+        eventTitle: eventMap.get(showtime.eventID.value)?.title ?? "Unknown",
         screenID: showtime.screenID.value,
         screenName: screenMap.get(showtime.screenID.value)?.name ?? "Unknown",
         startTime: showtime.timeSlot.timeStart,
@@ -99,15 +101,15 @@ export class ShowtimeApplicationService {
       });
     }
 
-    const [movie, screen] = await Promise.all([
-      this.movieRepository.movieOfID(showtime.movieID),
+    const [event, screen] = await Promise.all([
+      this.eventRepository.eventOfID(showtime.eventID),
       this.screenRepository.screenOfID(showtime.screenID),
     ]);
 
     return {
       id: showtime.id.value,
-      movieID: showtime.movieID.value,
-      movieTitle: movie?.title ?? "Unknown",
+      eventID: showtime.eventID.value,
+      eventTitle: event?.title ?? "Unknown",
       screenID: showtime.screenID.value,
       screenName: screen?.name ?? "Unknown",
       startTime: showtime.timeSlot.timeStart,
@@ -121,24 +123,24 @@ export class ShowtimeApplicationService {
   public async createShowtime(
     request: CreateShowtimeDTO,
   ): Promise<CreateShowtimeResult> {
-    const [movie, screen, showtimeID] = await Promise.all([
-      this.movieRepository.movieOfID(request.movieID),
+    const [event, screen, showtimeID] = await Promise.all([
+      this.eventRepository.eventOfID(request.eventID),
       this.screenRepository.screenOfID(request.screenID),
       this.showtimeRepository.nextIdentity(),
     ]);
-    if (movie === null || screen === null) {
+    if (event === null || screen === null) {
       throw new ApplicationError({
         code: ApplicationErrorCode.RESOURCE_NOT_FOUND,
-        message: movie === null ? "Movie not found" : "Screen not found",
+        message: event === null ? "Event not found" : "Screen not found",
       });
     }
 
     const showtime = Showtime.create({
       id: showtimeID,
-      movieID: movie.id,
+      eventID: event.id,
       screenID: screen.id,
       startTime: request.startTime,
-      durationMinutes: movie.durationMinutes,
+      durationMinutes: event.durationMinutes,
       pricing: Money.create(request.pricing, CurrencyCode.IDR),
       createdBy: request.createdBy,
     });
@@ -158,15 +160,17 @@ export class ShowtimeApplicationService {
       }
     }
 
-    movie.changeStatus(MovieStatus.COMING_SOON);
+    event.changeStatus("COMING_SOON");
 
-    await this.movieRepository.save(movie);
-    await this.showtimeRepository.save(showtime);
+    await this.unitOfWork.runInTransaction(async () => {
+      await this.eventRepository.save(event);
+      await this.showtimeRepository.save(showtime);
+    });
 
     this.eventPublisher.publish(
       new ShowtimeScheduledEvent(
         showtime.id,
-        showtime.movieID,
+        showtime.eventID,
         showtime.screenID,
         showtime.timeSlot.timeStart,
         showtime.timeSlot.timeEnd,
@@ -177,7 +181,7 @@ export class ShowtimeApplicationService {
       message: "Showtime created successfully",
       id: showtime.id.value,
       screenName: screen.name,
-      movieTitle: movie.title,
+      eventTitle: event.title,
       startTime: showtime.timeSlot.timeStart,
       endTime: showtime.timeSlot.timeEnd,
       pricing: showtime.pricing.amount,

@@ -5,6 +5,10 @@ export const RegisterBodyDTOSchema = z.object({
     .string()
     .min(2, { message: "Display name must be at least 2 characters" })
     .max(100, { message: "Display name must be at most 100 characters" }),
+  full_name: z
+    .string()
+    .min(2, { message: "Full name must be at least 2 characters" })
+    .max(200, { message: "Full name must be at most 200 characters" }),
   email: z.email({ message: "Invalid email address" }),
   password: z
     .string()
@@ -27,6 +31,7 @@ export const RegisterBodyDTOSchema = z.object({
 
 export interface RegisterBodyDTO {
   display_name: string;
+  full_name: string;
   email: string;
   password: string;
 }

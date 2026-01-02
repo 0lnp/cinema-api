@@ -8,6 +8,7 @@ import { EventORMEntity } from "./orm_entities/event_orm_entity";
 import { ShowtimeORMEntity } from "./orm_entities/showtime_orm_entity";
 import { SeatInventoryORMEntity } from "./orm_entities/seat_inventory_orm_entity";
 import { BookingORMEntity } from "./orm_entities/booking_orm_entity";
+import { UserProfileORMEntity } from "./orm_entities/user_profile_orm_entity";
 import { CategoryORMEntity } from "./orm_entities/category_orm_entity";
 
 export const typeORMDataSourceOptions = (
@@ -27,6 +28,7 @@ export const typeORMDataSourceOptions = (
     ShowtimeORMEntity,
     SeatInventoryORMEntity,
     BookingORMEntity,
+    UserProfileORMEntity,
     CategoryORMEntity,
   ],
 });
@@ -46,6 +48,7 @@ export default new DataSource({
     ShowtimeORMEntity,
     SeatInventoryORMEntity,
     BookingORMEntity,
+    UserProfileORMEntity,
     CategoryORMEntity,
   ],
   migrations: ["migrations/*.ts"],

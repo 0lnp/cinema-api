@@ -77,7 +77,7 @@ export class AuthController {
       userID: req.user.id,
       accessToken: req.accessToken,
     });
-    return result;
+    return AuthMapper.toLogoutResponse(result);
   }
 
   @UseGuards(AuthGuard)

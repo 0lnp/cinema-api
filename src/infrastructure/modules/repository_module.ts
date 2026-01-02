@@ -24,6 +24,9 @@ import { BookingORMEntity } from "../databases/orm_entities/booking_orm_entity";
 import { SeatInventoryRepository } from "src/domain/repositories/seat_inventory_repository";
 import { TypeormSeatInventoryRepository } from "../persistences/typeorm_seat_inventory_repository";
 import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory_orm_entity";
+import { UserProfileRepository } from "src/domain/repositories/user_profile_repository";
+import { TypeormUserProfileRepository } from "../persistences/typeorm_user_profile_repository";
+import { UserProfileORMEntity } from "../databases/orm_entities/user_profile_orm_entity";
 import { CategoryRepository } from "src/domain/repositories/category_repository";
 import { TypeormCategoryRepository } from "../persistences/typeorm_category_repository";
 import { CategoryORMEntity } from "../databases/orm_entities/category_orm_entity";
@@ -45,6 +48,7 @@ import { CategoryORMEntity } from "../databases/orm_entities/category_orm_entity
       ShowtimeORMEntity,
       BookingORMEntity,
       SeatInventoryORMEntity,
+      UserProfileORMEntity,
       CategoryORMEntity,
     ]),
   ],
@@ -78,6 +82,10 @@ import { CategoryORMEntity } from "../databases/orm_entities/category_orm_entity
       useClass: TypeormSeatInventoryRepository,
     },
     {
+      provide: UserProfileRepository.name,
+      useClass: TypeormUserProfileRepository,
+    },
+    {
       provide: CategoryRepository.name,
       useClass: TypeormCategoryRepository,
     },
@@ -90,6 +98,7 @@ import { CategoryORMEntity } from "../databases/orm_entities/category_orm_entity
     ShowtimeRepository.name,
     BookingRepository.name,
     SeatInventoryRepository.name,
+    UserProfileRepository.name,
     CategoryRepository.name,
   ],
 })
