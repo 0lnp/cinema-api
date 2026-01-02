@@ -124,6 +124,7 @@ components:
       type: object
       required:
         - display_name
+        - full_name
         - email
         - password
       properties:
@@ -131,7 +132,13 @@ components:
           type: string
           minLength: 2
           maxLength: 100
-          description: User's display name
+          description: User's display name (public username)
+          example: "johndoe"
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: User's full legal name
           example: "John Doe"
         email:
           type: string
@@ -288,10 +295,10 @@ components:
             role_name:
               type: string
               enum:
-                - CUSTOMER
-                - BOX_OFFICE_STAFF
-                - MANAGER
-                - ADMIN
+               - CUSTOMER
+               - BOX_OFFICE_STAFF
+               - MANAGER
+               - ADMIN
               description: User's role in the system
               example: "CUSTOMER"
             last_login_at:
@@ -306,8 +313,22 @@ components:
               description: Timestamp of user registration
               example: "2025-12-15T08:00:00.000Z"
 
-    # ==================== Movie Schemas ====================
-    MovieCertificate:
+    # ==================== Event Schemas ====================
+    EventType:
+      type: string
+      enum:
+        - MOVIE
+        - CONCERT
+        - PREMIERE
+        - OTHER
+      description: |
+        Type of event:
+        - MOVIE: Standard movie screening
+        - CONCERT: Live concert or music event
+        - PREMIERE: Movie premiere or special screening
+        - OTHER: Other event types
+
+    EventCertificate:
       type: string
       enum:
         - SU
@@ -315,45 +336,49 @@ components:
         - "17+"
         - "21+"
       description: |
-        Age rating certificate:
+        Age rating certificate (for MOVIE type events):
         - SU: Suitable for all ages
         - 13+: Suitable for ages 13 and above
         - 17+: Suitable for ages 17 and above
         - 21+: Adults only
 
-    MovieStatus:
+    EventStatus:
       type: string
       enum:
+        - DRAFT
         - COMING_SOON
         - NOW_SHOWING
-        - ENDED_RUN
-      description: Current status of the movie in the cinema
+        - ENDED
+      description: |
+        Current status of the event:
+        - DRAFT: Event is being prepared
+        - COMING_SOON: Event is announced but not yet showing
+        - NOW_SHOWING: Event is currently running
+        - ENDED: Event has ended
 
-    CreateMovieRequest:
+    CreateEventRequest:
       type: object
       required:
         - title
         - synopsis
         - duration_minutes
         - genres
-        - certificate
-        - release_year
-        - poster_path
+        - type
       properties:
         title:
           type: string
           maxLength: 100
-          description: Movie title
+          description: Event title
           example: "The Matrix Resurrections"
         synopsis:
           type: string
           maxLength: 1000
-          description: Movie plot summary
+          description: Event description or plot summary
           example: "Return to a world of two realities: one, everyday life; the other, what lies behind it."
         duration_minutes:
           type: integer
           minimum: 1
-          description: Movie runtime in minutes
+          description: Event duration in minutes
           example: 148
         genres:
           type: array
@@ -361,22 +386,25 @@ components:
             type: string
             maxLength: 50
           minItems: 1
-          description: List of genres
+          description: List of genres or categories
           example: ["Action", "Sci-Fi"]
+        type:
+          $ref: "#/components/schemas/EventType"
         certificate:
-          $ref: "#/components/schemas/MovieCertificate"
+          $ref: "#/components/schemas/EventCertificate"
+          description: Age rating certificate (required for MOVIE type)
         release_year:
           type: integer
           minimum: 1000
-          description: Year of release
+          description: Year of release (required for MOVIE type)
           example: 2021
         poster_path:
           type: string
           maxLength: 100
-          description: Path or URL to the movie poster
+          description: Path or URL to the event poster (required for MOVIE type)
           example: "/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
 
-    CreateMovieResponse:
+    CreateEventResponse:
       type: object
       required:
         - message
@@ -384,28 +412,31 @@ components:
       properties:
         message:
           type: string
-          example: "Movie created successfully"
+          example: "Event created successfully"
         data:
           type: object
           required:
             - id
             - title
+            - type
             - created_at
           properties:
             id:
               type: string
-              pattern: "^MOV_[\\w-]+$"
-              description: Unique movie identifier
-              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+              pattern: "^EVT_[\\w-]+$"
+              description: Unique event identifier
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
             title:
               type: string
               example: "The Matrix Resurrections"
+            type:
+              $ref: "#/components/schemas/EventType"
             created_at:
               type: string
               format: date-time
               example: "2025-12-17T10:30:00.000Z"
 
-    MovieListItem:
+    EventListItem:
       type: object
       required:
         - id
@@ -413,16 +444,14 @@ components:
         - synopsis
         - duration_minutes
         - genres
-        - certificate
-        - release_year
-        - poster_path
+        - type
         - status
         - created_at
       properties:
         id:
           type: string
-          pattern: "^MOV_[\\w-]+$"
-          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+          pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
         title:
           type: string
           example: "The Matrix Resurrections"
@@ -437,23 +466,31 @@ components:
           items:
             type: string
           example: ["Action", "Sci-Fi"]
+        type:
+          $ref: "#/components/schemas/EventType"
         certificate:
           type: string
+          nullable: true
+          description: Age rating (only for MOVIE type)
           example: "17+"
         release_year:
           type: integer
+          nullable: true
+          description: Year of release (only for MOVIE type)
           example: 2021
         poster_path:
           type: string
+          nullable: true
+          description: Path to poster image (only for MOVIE type)
           example: "/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
         status:
-          $ref: "#/components/schemas/MovieStatus"
+          $ref: "#/components/schemas/EventStatus"
         created_at:
           type: string
           format: date-time
           example: "2025-12-17T10:30:00.000Z"
 
-    GetAllMoviesResponse:
+    GetAllEventsResponse:
       type: object
       required:
         - data
@@ -470,10 +507,10 @@ components:
             - $ref: "#/components/schemas/PaginationMeta"
             - type: object
               properties:
+               items:
+                type: array
                 items:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/MovieListItem"
+                  $ref: "#/components/schemas/EventListItem"
 
     ExternalMovieSearchResult:
       type: object
@@ -517,13 +554,13 @@ components:
             results:
               type: array
               items:
-                $ref: "#/components/schemas/ExternalMovieSearchResult"
+               $ref: "#/components/schemas/ExternalMovieSearchResult"
             result_count:
               type: integer
               minimum: 0
               example: 5
 
-    SyncMovieRequest:
+    SyncEventRequest:
       type: object
       required:
         - external_id
@@ -531,18 +568,18 @@ components:
         external_id:
           type: string
           minLength: 1
-          description: External movie provider's ID (e.g., TMDB ID)
+          description: External provider's ID (e.g., TMDB ID for movies)
           example: "624860"
 
-    ChangeMovieStatusRequest:
+    ChangeEventStatusRequest:
       type: object
       required:
         - status
       properties:
         status:
-          $ref: "#/components/schemas/MovieStatus"
+          $ref: "#/components/schemas/EventStatus"
 
-    ChangeMovieStatusResponse:
+    ChangeEventStatusResponse:
       type: object
       required:
         - message
@@ -550,7 +587,7 @@ components:
       properties:
         message:
           type: string
-          example: "Movie status updated successfully"
+          example: "Event status updated successfully"
         data:
           type: object
           required:
@@ -559,13 +596,13 @@ components:
           properties:
             id:
               type: string
-              pattern: "^MOV_[\\w-]+$"
-              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+              pattern: "^EVT_[\\w-]+$"
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
             title:
               type: string
               example: "The Matrix Resurrections"
 
-    DeleteMovieResponse:
+    DeleteEventResponse:
       type: object
       required:
         - message
@@ -573,7 +610,7 @@ components:
       properties:
         message:
           type: string
-          example: "Movie deleted successfully"
+          example: "Event deleted successfully"
         data:
           type: object
           required:
@@ -581,8 +618,484 @@ components:
           properties:
             id:
               type: string
-              pattern: "^MOV_[\\w-]+$"
-              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+              pattern: "^EVT_[\\w-]+$"
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+
+    SetEventCategoryRequest:
+      type: object
+      required:
+        - category_id
+      properties:
+        category_id:
+          type: string
+          nullable: true
+          pattern: "^CAT_[\\w-]+$"
+          description: Category ID to assign (null to remove category)
+          example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+
+    SetEventCategoryResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Event category updated successfully"
+        data:
+          type: object
+          required:
+            - event_id
+            - category_id
+          properties:
+            event_id:
+              type: string
+              pattern: "^EVT_[\\w-]+$"
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+            category_id:
+              type: string
+              nullable: true
+              pattern: "^CAT_[\\w-]+$"
+              example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+
+    # ==================== Category Schemas ====================
+    CategoryListItem:
+      type: object
+      required:
+        - id
+        - name
+        - parent_id
+        - path
+        - level
+        - created_at
+      properties:
+        id:
+          type: string
+          pattern: "^CAT_[\\w-]+$"
+          example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Movies"
+        parent_id:
+          type: string
+          nullable: true
+          pattern: "^CAT_[\\w-]+$"
+          description: Parent category ID (null for root categories)
+          example: null
+        path:
+          type: string
+          description: Materialized path for hierarchy
+          example: "/CAT_550e8400-e29b-41d4-a716-446655440000"
+        level:
+          type: integer
+          description: Depth level in hierarchy (0 for root)
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-17T10:30:00.000Z"
+
+    CategoryTreeNode:
+      type: object
+      required:
+        - id
+        - name
+        - level
+        - children
+      properties:
+        id:
+          type: string
+          pattern: "^CAT_[\\w-]+$"
+          example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Movies"
+        level:
+          type: integer
+          example: 0
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryTreeNode"
+
+    GetAllCategoriesResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Categories retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryListItem"
+
+    GetCategoryTreeResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Category tree retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryTreeNode"
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Category name
+          example: "Action Movies"
+
+    CreateCategoryResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Category created successfully"
+        data:
+          $ref: "#/components/schemas/CategoryListItem"
+
+    DeleteCategoryResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Category deleted successfully"
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              pattern: "^CAT_[\\w-]+$"
+              example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+
+    # ==================== Report Schemas ====================
+    EventRevenueItem:
+      type: object
+      required:
+        - event_id
+        - title
+        - type
+        - total_bookings
+        - total_revenue
+        - currency
+      properties:
+        event_id:
+          type: string
+          pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "The Matrix Resurrections"
+        type:
+          $ref: "#/components/schemas/EventType"
+        total_bookings:
+          type: integer
+          example: 150
+        total_revenue:
+          type: number
+          example: 7500000
+        currency:
+          type: string
+          example: "IDR"
+
+    RevenueReportResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Revenue report retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventRevenueItem"
+
+    BookingStatusItem:
+      type: object
+      required:
+        - status
+        - count
+        - total_amount
+      properties:
+        status:
+          $ref: "#/components/schemas/BookingStatus"
+        count:
+          type: integer
+          example: 50
+        total_amount:
+          type: number
+          example: 2500000
+
+    BookingStatusReportResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Booking statistics retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingStatusItem"
+
+    DailyTrendItem:
+      type: object
+      required:
+        - date
+        - booking_count
+        - total_revenue
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2025-12-20"
+        booking_count:
+          type: integer
+          example: 25
+        total_revenue:
+          type: number
+          example: 1250000
+
+    DailyTrendReportResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Daily booking trends retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyTrendItem"
+
+    CategoryHierarchyItem:
+      type: object
+      required:
+        - id
+        - name
+        - level
+        - path
+      properties:
+        id:
+          type: string
+          pattern: "^CAT_[\\w-]+$"
+          example: "CAT_550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Action Movies"
+        level:
+          type: integer
+          example: 1
+        path:
+          type: string
+          example: "/CAT_parent/CAT_child"
+
+    CategoryHierarchyResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Category hierarchy retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryHierarchyItem"
+
+    # ==================== Showtime Query Schemas ====================
+    ShowtimeDetailItem:
+      type: object
+      required:
+        - id
+        - time_start
+        - time_end
+        - pricing
+        - status
+        - event
+        - screen
+        - booked_seats
+        - available_seats
+      properties:
+        id:
+          type: string
+          pattern: "^SHW_[\\w-]+$"
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        time_start:
+          type: string
+          format: date-time
+          example: "2025-12-20T19:30:00.000Z"
+        time_end:
+          type: string
+          format: date-time
+          example: "2025-12-20T21:58:00.000Z"
+        pricing:
+          type: number
+          example: 50000
+        status:
+          $ref: "#/components/schemas/ShowtimeStatus"
+        event:
+          type: object
+          required:
+            - id
+            - type
+            - title
+            - duration_minutes
+          properties:
+            id:
+              type: string
+              pattern: "^EVT_[\\w-]+$"
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+            type:
+              $ref: "#/components/schemas/EventType"
+            title:
+              type: string
+              example: "The Matrix Resurrections"
+            duration_minutes:
+              type: integer
+              example: 148
+            poster_path:
+              type: string
+              nullable: true
+              example: "/8c4a8kE7PizaGQQnditMmI1xbRp.jpg"
+            certificate:
+              type: string
+              nullable: true
+              example: "17+"
+        screen:
+          type: object
+          required:
+            - id
+            - name
+            - capacity
+          properties:
+            id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+            name:
+              type: string
+              example: "Screen 1"
+            capacity:
+              type: integer
+              example: 150
+        booked_seats:
+          type: integer
+          description: Number of seats already booked
+          example: 45
+        available_seats:
+          type: integer
+          description: Number of available seats
+          example: 105
+
+    ShowtimeDetailsResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Showtimes with details retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShowtimeDetailItem"
+
+    UpcomingShowtimeItem:
+      type: object
+      required:
+        - id
+        - time_start
+        - time_end
+        - pricing
+        - status
+        - screen
+        - booked_seats
+        - available_seats
+      properties:
+        id:
+          type: string
+          pattern: "^SHW_[\\w-]+$"
+          example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+        time_start:
+          type: string
+          format: date-time
+          example: "2025-12-20T19:30:00.000Z"
+        time_end:
+          type: string
+          format: date-time
+          example: "2025-12-20T21:58:00.000Z"
+        pricing:
+          type: number
+          example: 50000
+        status:
+          $ref: "#/components/schemas/ShowtimeStatus"
+        screen:
+          type: object
+          required:
+            - id
+            - name
+            - capacity
+          properties:
+            id:
+              type: string
+              pattern: "^SCR_[\\w-]+$"
+              example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+            name:
+              type: string
+              example: "Screen 1"
+            capacity:
+              type: integer
+              example: 150
+        booked_seats:
+          type: integer
+          example: 45
+        available_seats:
+          type: integer
+          example: 105
+
+    UpcomingShowtimesResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Upcoming showtimes retrieved successfully"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingShowtimeItem"
 
     # ==================== Screen Schemas ====================
     SeatRow:
@@ -663,7 +1176,7 @@ components:
             seat_layout:
               type: array
               items:
-                $ref: "#/components/schemas/SeatRow"
+               $ref: "#/components/schemas/SeatRow"
             created_at:
               type: string
               format: date-time
@@ -711,7 +1224,7 @@ components:
             seat_layout:
               type: array
               items:
-                $ref: "#/components/schemas/SeatRow"
+               $ref: "#/components/schemas/SeatRow"
 
     DeleteScreenResponse:
       type: object
@@ -748,22 +1261,22 @@ components:
     CreateShowtimeRequest:
       type: object
       required:
-        - movie_id
+        - event_id
         - screen_id
         - start_time
         - pricing
       properties:
-        movie_id:
+        event_id:
           type: string
-          pattern: "^MOV_[\\w-]+$"
+          pattern: "^EVT_[\\w-]+$"
           maxLength: 100
-          description: ID of the movie to schedule
-          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+          description: ID of the event to schedule
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
         screen_id:
           type: string
           pattern: "^SCR_[\\w-]+$"
           maxLength: 100
-          description: ID of the screen where the movie will be shown
+          description: ID of the screen where the event will be shown
           example: "SCR_550e8400-e29b-41d4-a716-446655440000"
         start_time:
           type: string
@@ -791,7 +1304,7 @@ components:
           required:
             - id
             - screen_name
-            - movie_title
+            - event_title
             - start_time
             - end_time
             - pricing
@@ -806,7 +1319,7 @@ components:
             screen_name:
               type: string
               example: "Screen 1"
-            movie_title:
+            event_title:
               type: string
               example: "The Matrix Resurrections"
             start_time:
@@ -832,8 +1345,8 @@ components:
       type: object
       required:
         - id
-        - movie_id
-        - movie_title
+        - event_id
+        - event_title
         - screen_id
         - screen_name
         - start_time
@@ -845,11 +1358,11 @@ components:
           type: string
           pattern: "^SHW_[\\w-]+$"
           example: "SHW_550e8400-e29b-41d4-a716-446655440000"
-        movie_id:
+        event_id:
           type: string
-          pattern: "^MOV_[\\w-]+$"
-          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
-        movie_title:
+          pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+        event_title:
           type: string
           example: "The Matrix Resurrections"
         screen_id:
@@ -891,10 +1404,10 @@ components:
             - $ref: "#/components/schemas/PaginationMeta"
             - type: object
               properties:
+               items:
+                type: array
                 items:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/ShowtimeListItem"
+                  $ref: "#/components/schemas/ShowtimeListItem"
 
     GetShowtimeResponse:
       type: object
@@ -905,8 +1418,8 @@ components:
           type: object
           required:
             - id
-            - movie_id
-            - movie_title
+            - event_id
+            - event_title
             - screen_id
             - screen_name
             - start_time
@@ -919,11 +1432,11 @@ components:
               type: string
               pattern: "^SHW_[\\w-]+$"
               example: "SHW_550e8400-e29b-41d4-a716-446655440000"
-            movie_id:
+            event_id:
               type: string
-              pattern: "^MOV_[\\w-]+$"
-              example: "MOV_550e8400-e29b-41d4-a716-446655440000"
-            movie_title:
+              pattern: "^EVT_[\\w-]+$"
+              example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+            event_title:
               type: string
               example: "The Matrix Resurrections"
             screen_id:
@@ -1086,7 +1599,7 @@ components:
             seat_numbers:
               type: array
               items:
-                type: string
+               type: string
               example: ["A1", "A2", "A3"]
             ticket_count:
               type: integer
@@ -1156,7 +1669,7 @@ components:
             - id
             - customer_id
             - showtime_id
-            - movie_title
+            - event_title
             - screen_name
             - start_time
             - end_time
@@ -1184,7 +1697,7 @@ components:
               type: string
               pattern: "^SHW_[\\w-]+$"
               example: "SHW_550e8400-e29b-41d4-a716-446655440000"
-            movie_title:
+            event_title:
               type: string
               example: "The Matrix Resurrections"
             screen_name:
@@ -1201,7 +1714,7 @@ components:
             tickets:
               type: array
               items:
-                $ref: "#/components/schemas/BookingTicket"
+               $ref: "#/components/schemas/BookingTicket"
             status:
               $ref: "#/components/schemas/BookingStatus"
             total_amount:
@@ -1250,7 +1763,7 @@ components:
       required:
         - id
         - showtime_id
-        - movie_title
+        - event_title
         - screen_name
         - start_time
         - seat_count
@@ -1267,7 +1780,7 @@ components:
           type: string
           pattern: "^SHW_[\\w-]+$"
           example: "SHW_550e8400-e29b-41d4-a716-446655440000"
-        movie_title:
+        event_title:
           type: string
           example: "The Matrix Resurrections"
         screen_name:
@@ -1310,10 +1823,10 @@ components:
             - $ref: "#/components/schemas/PaginationMeta"
             - type: object
               properties:
+               items:
+                type: array
                 items:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/BookingListItem"
+                  $ref: "#/components/schemas/BookingListItem"
 
     InitiatePaymentResponse:
       type: object
@@ -1446,16 +1959,16 @@ components:
           example: 165000
 
   parameters:
-    MovieIdPath:
-      name: movie_id
+    EventIdPath:
+      name: event_id
       in: path
       required: true
-      description: Unique movie identifier
+      description: Unique event identifier
       schema:
         type: string
-        pattern: "^MOV_[\\w-]+$"
+        pattern: "^EVT_[\\w-]+$"
         maxLength: 100
-      example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+      example: "EVT_550e8400-e29b-41d4-a716-446655440000"
 
     ScreenIdPath:
       name: screen_id
@@ -1478,6 +1991,17 @@ components:
         pattern: "^SHW_[\\w-]+$"
         maxLength: 100
       example: "SHW_550e8400-e29b-41d4-a716-446655440000"
+
+    CategoryIdPath:
+      name: id
+      in: path
+      required: true
+      description: Unique category identifier
+      schema:
+        type: string
+        pattern: "^CAT_[\\w-]+$"
+        maxLength: 100
+      example: "CAT_550e8400-e29b-41d4-a716-446655440000"
 
     BookingIdPath:
       name: booking_id
@@ -1542,29 +2066,29 @@ components:
             validation_error:
               summary: Validation Error
               value:
-                message: "Validation failed"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies"
-                errors:
-                  title: "String must contain at most 100 character(s)"
+               message: "Validation failed"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events"
+               errors:
+                title: "String must contain at most 100 character(s)"
             invalid_email:
               summary: Invalid Email Format
               value:
-                message: "Invalid email format"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/auth/register"
+               message: "Invalid email format"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/auth/register"
             invalid_password:
               summary: Invalid Password Format
               value:
-                message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/auth/register"
+               message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/auth/register"
             invalid_id_format:
               summary: Invalid ID Format
               value:
-                message: "Invalid movie ID format"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies/invalid-id"
+               message: "Invalid event ID format"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events/invalid-id"
 
     Unauthorized:
       description: Authentication required or invalid credentials
@@ -1576,27 +2100,27 @@ components:
             invalid_credentials:
               summary: Invalid Credentials
               value:
-                message: "Invalid email or password"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/auth/login"
+               message: "Invalid email or password"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/auth/login"
             invalid_token:
               summary: Invalid JWT Token
               value:
-                message: "Invalid or malformed token"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies"
+               message: "Invalid or malformed token"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events"
             expired_token:
               summary: Expired JWT Token
               value:
-                message: "Token has expired"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies"
+               message: "Token has expired"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events"
             token_reuse:
               summary: Token Reuse Detected
               value:
-                message: "This refresh token has already been used. Please login again."
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/auth/refresh"
+               message: "This refresh token has already been used. Please login again."
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/auth/refresh"
 
     Forbidden:
       description: Insufficient permissions
@@ -1607,7 +2131,7 @@ components:
           example:
             message: "You do not have permission to perform this action"
             timestamp: "2025-12-17T10:30:00.000Z"
-            path: "/movies"
+            path: "/events"
 
     NotFound:
       description: Resource not found
@@ -1616,24 +2140,24 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           examples:
-            movie_not_found:
-              summary: Movie Not Found
+            event_not_found:
+              summary: Event Not Found
               value:
-                message: 'Movie with ID "MOV_xxx" not found'
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies/MOV_xxx"
+               message: 'Event with ID "EVT_xxx" not found'
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events/EVT_xxx"
             screen_not_found:
               summary: Screen Not Found
               value:
-                message: 'Screen with ID "SCR_xxx" not found'
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/screens/SCR_xxx"
+               message: 'Screen with ID "SCR_xxx" not found'
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/screens/SCR_xxx"
             showtime_not_found:
               summary: Showtime Not Found
               value:
-                message: 'Showtime with ID "SHW_xxx" not found'
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/showtimes/SHW_xxx"
+               message: 'Showtime with ID "SHW_xxx" not found'
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/showtimes/SHW_xxx"
 
     Conflict:
       description: Resource conflict
@@ -1645,15 +2169,15 @@ components:
             email_exists:
               summary: Email Already Exists
               value:
-                message: "User with this email already exists"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/auth/register"
+               message: "User with this email already exists"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/auth/register"
             showtime_conflict:
               summary: Showtime Conflict
               value:
-                message: "The time slot conflicts with an existing showtime on this screen"
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/showtimes"
+               message: "The time slot conflicts with an existing showtime on this screen"
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/showtimes"
 
 paths:
   # ==================== Authentication Endpoints ====================
@@ -1686,7 +2210,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegisterResponse"
+               $ref: "#/components/schemas/RegisterResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "409":
@@ -1720,7 +2244,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoginResponse"
+               $ref: "#/components/schemas/LoginResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1753,7 +2277,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RefreshTokenResponse"
+               $ref: "#/components/schemas/RefreshTokenResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1777,7 +2301,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogoutResponse"
+               $ref: "#/components/schemas/LogoutResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1801,31 +2325,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProfileResponse"
+               $ref: "#/components/schemas/ProfileResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  # ==================== Movie Endpoints ====================
-  /movies:
+  # ==================== Event Endpoints ====================
+  /events:
     get:
       tags:
-        - Movies
-      summary: List all movies
+        - Events
+      summary: List all events
       description: |
-        Retrieve a paginated list of movies from the database.
+        Retrieve a paginated list of events from the database.
 
-        **Permissions Required:** VIEW:MOVIE, VIEW_ALL:MOVIE, or MANAGE:MOVIE
+        **Permissions Required:** VIEW:EVENT, VIEW_ALL:EVENT, or MANAGE:EVENT
 
         **Filtering:**
-        - `search`: Search by movie title (case-insensitive partial match)
-        - `status`: Filter by movie status
+        - `search`: Search by event title (case-insensitive partial match)
+        - `status`: Filter by event status
+        - `type`: Filter by event type (MOVIE, CONCERT, PREMIERE, OTHER)
         - `genre`: Filter by genre (exact match)
-        - `release_year`: Filter by release year
+        - `release_year`: Filter by release year (for MOVIE type)
 
         **Sorting:**
         - `sort_by`: title, releaseYear, createdAt, durationMinutes
         - `sort_order`: asc or desc
-      operationId: getMovies
+      operationId: getEvents
       security:
         - BearerAuth: []
       parameters:
@@ -1846,9 +2371,14 @@ paths:
           example: "createdAt"
         - name: status
           in: query
-          description: Filter by movie status
+          description: Filter by event status
           schema:
-            $ref: "#/components/schemas/MovieStatus"
+            $ref: "#/components/schemas/EventStatus"
+        - name: type
+          in: query
+          description: Filter by event type
+          schema:
+            $ref: "#/components/schemas/EventType"
         - name: genre
           in: query
           description: Filter by genre
@@ -1857,17 +2387,17 @@ paths:
           example: "Action"
         - name: release_year
           in: query
-          description: Filter by release year
+          description: Filter by release year (for MOVIE type)
           schema:
             type: integer
           example: 2021
       responses:
         "200":
-          description: List of movies
+          description: List of events
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAllMoviesResponse"
+               $ref: "#/components/schemas/GetAllEventsResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1875,26 +2405,27 @@ paths:
 
     post:
       tags:
-        - Movies
-      summary: Create a new movie
+        - Events
+      summary: Create a new event
       description: |
-        Create a new movie entry manually with full details.
+        Create a new event entry manually with full details.
 
-        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+        **Permissions Required:** CREATE:EVENT or MANAGE:EVENT
 
         **Validation Rules:**
         - `title`: Maximum 100 characters
         - `synopsis`: Maximum 1000 characters
         - `duration_minutes`: Minimum 1 minute
         - `genres`: Array of strings, each maximum 50 characters
-        - `certificate`: Must be one of SU, 13+, 17+, 21+
-        - `release_year`: Minimum 1000
-        - `poster_path`: Maximum 100 characters
+        - `type`: Required (MOVIE, CONCERT, PREMIERE, OTHER)
+        - `certificate`: Required for MOVIE type (SU, 13+, 17+, 21+)
+        - `release_year`: Required for MOVIE type
+        - `poster_path`: Required for MOVIE type
 
         **Business Rules:**
-        - New movies are created with status COMING_SOON
+        - New events are created with status DRAFT
         - The creating user is recorded as the creator
-      operationId: createMovie
+      operationId: createEvent
       security:
         - BearerAuth: []
       requestBody:
@@ -1902,14 +2433,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateMovieRequest"
+              $ref: "#/components/schemas/CreateEventRequest"
       responses:
         "201":
-          description: Movie created successfully
+          description: Event created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateMovieResponse"
+               $ref: "#/components/schemas/CreateEventResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1917,18 +2448,18 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /movies/search/external:
+  /events/search/external:
     get:
       tags:
-        - Movies
+        - Events
       summary: Search movies from external provider
       description: |
         Search for movies from an external provider (TMDB).
 
-        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+        **Permissions Required:** CREATE:EVENT or MANAGE:EVENT
 
         Use this endpoint to find movies to import into the system.
-        To import a movie, use the `POST /movies/sync` endpoint with the `external_id`.
+        To import a movie, use the `POST /events/sync` endpoint with the `external_id`.
       operationId: searchExternalMovies
       security:
         - BearerAuth: []
@@ -1948,7 +2479,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchExternalMoviesResponse"
+               $ref: "#/components/schemas/SearchExternalMoviesResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1956,26 +2487,26 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /movies/sync:
+  /events/sync:
     post:
       tags:
-        - Movies
+        - Events
       summary: Sync movie from external provider
       description: |
         Import a movie from an external provider (TMDB) using its external ID.
 
-        **Permissions Required:** CREATE:MOVIE or MANAGE:MOVIE
+        **Permissions Required:** CREATE:EVENT or MANAGE:EVENT
 
         **Workflow:**
-        1. Search for movies using `GET /movies/search/external`
+        1. Search for movies using `GET /events/search/external`
         2. Get the `external_id` from the search results
         3. Use this endpoint to import the movie into the database
 
         **Business Rules:**
         - Movie details are fetched from the external provider
         - Duration and other metadata are automatically populated
-        - New movies are created with status COMING_SOON
-      operationId: syncMovie
+        - New events are created with type MOVIE and status DRAFT
+      operationId: syncEvent
       security:
         - BearerAuth: []
       requestBody:
@@ -1983,14 +2514,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SyncMovieRequest"
+              $ref: "#/components/schemas/SyncEventRequest"
       responses:
         "201":
-          description: Movie synced successfully
+          description: Event synced successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateMovieResponse"
+               $ref: "#/components/schemas/CreateEventResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2002,44 +2533,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: 'Movie with external ID "12345" not found'
-                timestamp: "2025-12-17T10:30:00.000Z"
-                path: "/movies/sync"
+               message: 'Movie with external ID "12345" not found'
+               timestamp: "2025-12-17T10:30:00.000Z"
+               path: "/events/sync"
 
-  /movies/{movie_id}:
+  /events/{event_id}:
     patch:
       tags:
-        - Movies
-      summary: Change movie status
+        - Events
+      summary: Change event status
       description: |
-        Update the status of an existing movie.
+        Update the status of an existing event.
 
-        **Permissions Required:** MANAGE:MOVIE
+        **Permissions Required:** MANAGE:EVENT
 
         **Valid Status Transitions:**
-        - COMING_SOON → NOW_SHOWING (when movie starts screening)
-        - NOW_SHOWING → ENDED_RUN (when movie run ends)
-        - Any status can transition to ENDED_RUN
-      operationId: changeMovieStatus
+        - DRAFT → COMING_SOON (when event is ready for announcement)
+        - COMING_SOON → NOW_SHOWING (when event starts)
+        - NOW_SHOWING → ENDED (when event run ends)
+        - Any status can transition to ENDED
+      operationId: changeEventStatus
       security:
         - BearerAuth: []
       parameters:
-        - $ref: "#/components/parameters/MovieIdPath"
+        - $ref: "#/components/parameters/EventIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ChangeMovieStatusRequest"
+              $ref: "#/components/schemas/ChangeEventStatusRequest"
       responses:
         "200":
-          description: Movie status updated successfully
+          description: Event status updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChangeMovieStatusResponse"
+               $ref: "#/components/schemas/ChangeEventStatusResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2051,29 +2583,70 @@ paths:
 
     delete:
       tags:
-        - Movies
-      summary: Delete a movie
+        - Events
+      summary: Delete an event
       description: |
-        Soft delete a movie from the system.
+        Soft delete an event from the system.
 
-        **Permissions Required:** MANAGE:MOVIE
+        **Permissions Required:** MANAGE:EVENT
 
         **Business Rules:**
-        - Movies are soft-deleted (marked as deleted, not physically removed)
-        - Deleted movies will not appear in listings
+        - Events are soft-deleted (marked as deleted, not physically removed)
+        - Deleted events will not appear in listings
         - Associated showtimes may be affected
-      operationId: deleteMovie
+      operationId: deleteEvent
       security:
         - BearerAuth: []
       parameters:
-        - $ref: "#/components/parameters/MovieIdPath"
+        - $ref: "#/components/parameters/EventIdPath"
       responses:
         "200":
-          description: Movie deleted successfully
+          description: Event deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteMovieResponse"
+               $ref: "#/components/schemas/DeleteEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /events/{event_id}/category:
+    put:
+      tags:
+        - Events
+      summary: Set event category
+      description: |
+        Assign or remove a category from an event.
+
+        **Permissions Required:** MANAGE:EVENT
+
+        **Business Rules:**
+        - Pass a valid category ID to assign a category
+        - Pass null to remove the current category assignment
+        - The category must exist in the system
+      operationId: setEventCategory
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetEventCategoryRequest"
+      responses:
+        "200":
+          description: Event category updated successfully
+          content:
+            application/json:
+              schema:
+               $ref: "#/components/schemas/SetEventCategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2116,7 +2689,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateScreenResponse"
+               $ref: "#/components/schemas/CreateScreenResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2155,7 +2728,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SetScreenLayoutResponse"
+               $ref: "#/components/schemas/SetScreenLayoutResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2189,11 +2762,417 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteScreenResponse"
+               $ref: "#/components/schemas/DeleteScreenResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Category Endpoints ====================
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: List all categories
+      description: |
+        Retrieve all categories as a flat list.
+
+        **Permissions Required:** Any authenticated user
+      operationId: getAllCategories
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAllCategoriesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags:
+        - Categories
+      summary: Create a root category
+      description: |
+        Create a new root-level category.
+
+        **Permissions Required:** MANAGE:MOVIE (Event management permission)
+
+        **Validation Rules:**
+        - `name`: 1-100 characters
+      operationId: createRootCategory
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /categories/tree:
+    get:
+      tags:
+        - Categories
+      summary: Get category tree
+      description: |
+        Retrieve categories as a hierarchical tree structure.
+
+        **Permissions Required:** Any authenticated user
+      operationId: getCategoryTree
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Category tree retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCategoryTreeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /categories/{id}/children:
+    post:
+      tags:
+        - Categories
+      summary: Create a child category
+      description: |
+        Create a new category as a child of an existing category.
+
+        **Permissions Required:** MANAGE:MOVIE (Event management permission)
+
+        **Validation Rules:**
+        - `name`: 1-100 characters
+        - Parent category must exist
+      operationId: createChildCategory
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CategoryIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Child category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /categories/{id}:
+    delete:
+      tags:
+        - Categories
+      summary: Delete a category
+      description: |
+        Delete a category from the system.
+
+        **Permissions Required:** MANAGE:MOVIE (Event management permission)
+
+        **Business Rules:**
+        - Categories with children may be recursively deleted (implementation dependent)
+      operationId: deleteCategory
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CategoryIdPath"
+      responses:
+        "200":
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteCategoryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== Report Endpoints ====================
+  /reports/revenue:
+    get:
+      tags:
+        - Reports
+      summary: Get revenue report by event
+      description: |
+        Get revenue report aggregated by event within a date range.
+
+        **Permissions Required:** MANAGE:BOOKING (Admin only)
+
+        Uses complex aggregations with joins for analytics.
+      operationId: getRevenueByEvent
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          description: Start date for the report (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-01T00:00:00.000Z"
+        - name: end_date
+          in: query
+          required: true
+          description: End date for the report (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-31T23:59:59.000Z"
+      responses:
+        "200":
+          description: Revenue report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueReportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /reports/bookings:
+    get:
+      tags:
+        - Reports
+      summary: Get booking statistics by status
+      description: |
+        Get booking statistics grouped by status with optional filters.
+
+        **Permissions Required:** MANAGE:BOOKING (Admin only)
+      operationId: getBookingsByStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: Optional start date filter
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-01T00:00:00.000Z"
+        - name: end_date
+          in: query
+          description: Optional end date filter
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-31T23:59:59.000Z"
+        - name: event_id
+          in: query
+          description: Optional event ID filter
+          schema:
+            type: string
+            pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+        - name: status
+          in: query
+          description: Optional booking status filter
+          schema:
+            $ref: "#/components/schemas/BookingStatus"
+      responses:
+        "200":
+          description: Booking statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingStatusReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /reports/daily-trend:
+    get:
+      tags:
+        - Reports
+      summary: Get daily booking trends
+      description: |
+        Get daily booking trends within a date range.
+
+        **Permissions Required:** MANAGE:BOOKING (Admin only)
+      operationId: getDailyBookingTrends
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          description: Start date for the trend report
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-01T00:00:00.000Z"
+        - name: end_date
+          in: query
+          required: true
+          description: End date for the trend report
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-31T23:59:59.000Z"
+      responses:
+        "200":
+          description: Daily booking trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyTrendReportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /reports/category-hierarchy:
+    get:
+      tags:
+        - Reports
+      summary: Get category hierarchy report
+      description: |
+        Get category hierarchy using recursive CTE for analytics.
+
+        **Permissions Required:** MANAGE:BOOKING (Admin only)
+      operationId: getCategoryHierarchy
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Category hierarchy retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryHierarchyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ==================== Showtime Query Endpoints ====================
+  /showtimes/details:
+    get:
+      tags:
+        - Showtimes
+      summary: Get showtimes with full details
+      description: |
+        Get showtimes with full details including event info, screen info, and seat availability.
+        
+        **Permissions Required:** Any authenticated user
+
+        Uses QueryBuilder for complex joins - optimized read path (CQRS pattern).
+      operationId: getShowtimesWithDetails
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: Filter by start date
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-20T00:00:00.000Z"
+        - name: end_date
+          in: query
+          description: Filter by end date
+          schema:
+            type: string
+            format: date-time
+          example: "2025-12-27T23:59:59.000Z"
+        - name: event_id
+          in: query
+          description: Filter by event ID
+          schema:
+            type: string
+            pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+        - name: screen_id
+          in: query
+          description: Filter by screen ID
+          schema:
+            type: string
+            pattern: "^SCR_[\\w-]+$"
+          example: "SCR_550e8400-e29b-41d4-a716-446655440000"
+        - name: status
+          in: query
+          description: Filter by showtime status
+          schema:
+            $ref: "#/components/schemas/ShowtimeStatus"
+      responses:
+        "200":
+          description: Showtimes with details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShowtimeDetailsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /showtimes/events/{eventId}/upcoming:
+    get:
+      tags:
+        - Showtimes
+      summary: Get upcoming showtimes for an event
+      description: |
+        Get upcoming showtimes for a specific event with availability information.
+
+        **Permissions Required:** Any authenticated user
+      operationId: getUpcomingShowtimesForEvent
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          description: Event ID to get upcoming showtimes for
+          schema:
+            type: string
+            pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: Upcoming showtimes retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpcomingShowtimesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -2210,7 +3189,7 @@ paths:
 
         **Filtering:**
         - `screen_id`: Filter by specific screen
-        - `movie_id`: Filter by specific movie
+        - `event_id`: Filter by specific event
         - `date`: Filter by date (YYYY-MM-DD format)
         - `status`: Filter by showtime status
 
@@ -2241,13 +3220,13 @@ paths:
             type: string
             pattern: "^SCR_[\\w-]+$"
           example: "SCR_550e8400-e29b-41d4-a716-446655440000"
-        - name: movie_id
+        - name: event_id
           in: query
-          description: Filter by movie ID
+          description: Filter by event ID
           schema:
             type: string
-            pattern: "^MOV_[\\w-]+$"
-          example: "MOV_550e8400-e29b-41d4-a716-446655440000"
+            pattern: "^EVT_[\\w-]+$"
+          example: "EVT_550e8400-e29b-41d4-a716-446655440000"
         - name: date
           in: query
           description: Filter by date
@@ -2266,7 +3245,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAllShowtimesResponse"
+               $ref: "#/components/schemas/GetAllShowtimesResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2277,19 +3256,19 @@ paths:
         - Showtimes
       summary: Create a new showtime
       description: |
-        Schedule a new movie showtime.
+        Schedule a new event showtime.
 
         **Permissions Required:** CREATE:SHOWTIME or MANAGE:SHOWTIME
 
         **Validation Rules:**
-        - `movie_id`: Must be a valid movie ID (format: MOV_xxx)
+        - `event_id`: Must be a valid event ID (format: EVT_xxx)
         - `screen_id`: Must be a valid screen ID (format: SCR_xxx)
         - `start_time`: ISO 8601 datetime format
         - `pricing`: Minimum 0
 
         **Business Rules:**
-        - The movie and screen must exist
-        - End time is automatically calculated based on movie duration
+        - The event and screen must exist
+        - End time is automatically calculated based on event duration
         - Cannot create overlapping showtimes on the same screen
         - New showtimes are created with status SCHEDULED
       operationId: createShowtime
@@ -2307,7 +3286,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateShowtimeResponse"
+               $ref: "#/components/schemas/CreateShowtimeResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2339,7 +3318,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetShowtimeResponse"
+               $ref: "#/components/schemas/GetShowtimeResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2380,7 +3359,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateShowtimeResponse"
+               $ref: "#/components/schemas/UpdateShowtimeResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2413,7 +3392,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteShowtimeResponse"
+               $ref: "#/components/schemas/DeleteShowtimeResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2458,7 +3437,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAllBookingsResponse"
+               $ref: "#/components/schemas/GetAllBookingsResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2498,7 +3477,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateBookingResponse"
+               $ref: "#/components/schemas/CreateBookingResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2510,21 +3489,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: 'Showtime with ID "SHW_xxx" not found'
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings"
+               message: 'Showtime with ID "SHW_xxx" not found'
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings"
         "409":
           description: Seats not available
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "One or more selected seats are not available"
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings"
+               message: "One or more selected seats are not available"
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings"
 
   /bookings/admin/all:
     get:
@@ -2586,7 +3565,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAllBookingsResponse"
+               $ref: "#/components/schemas/GetAllBookingsResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2618,7 +3597,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetBookingResponse"
+               $ref: "#/components/schemas/GetBookingResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2628,11 +3607,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: 'Booking with ID "BKG_xxx" not found'
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings/BKG_xxx"
+               message: 'Booking with ID "BKG_xxx" not found'
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings/BKG_xxx"
 
   /bookings/{booking_id}/pay:
     post:
@@ -2667,17 +3646,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InitiatePaymentResponse"
+               $ref: "#/components/schemas/InitiatePaymentResponse"
         "400":
           description: Booking not in valid state for payment
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "Booking is not in PENDING_PAYMENT status"
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings/BKG_xxx/pay"
+               message: "Booking is not in PENDING_PAYMENT status"
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings/BKG_xxx/pay"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2716,17 +3695,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CancelBookingResponse"
+               $ref: "#/components/schemas/CancelBookingResponse"
         "400":
           description: Booking cannot be cancelled
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "Booking in CHECKED_IN status cannot be cancelled"
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings/BKG_xxx/cancel"
+               message: "Booking in CHECKED_IN status cannot be cancelled"
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings/BKG_xxx/cancel"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2777,17 +3756,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TicketDownloadResponse"
+               $ref: "#/components/schemas/TicketDownloadResponse"
         "400":
           description: Invalid request (e.g., missing seat_number for qr_code)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "seat_number is required when type is qr_code"
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/bookings/BKG_xxx/ticket/download"
+               message: "seat_number is required when type is qr_code"
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/bookings/BKG_xxx/ticket/download"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2834,18 +3813,18 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  received:
-                    type: boolean
-                    example: true
+               type: object
+               properties:
+                received:
+                  type: boolean
+                  example: true
         "401":
           description: Invalid webhook signature
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+               $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "Invalid webhook signature"
-                timestamp: "2025-12-18T10:30:00.000Z"
-                path: "/webhooks/xendit"
+               message: "Invalid webhook signature"
+               timestamp: "2025-12-18T10:30:00.000Z"
+               path: "/webhooks/xendit"
