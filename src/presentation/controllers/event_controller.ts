@@ -165,8 +165,6 @@ export class EventController {
     return EventMapper.toDeleteResponse(result);
   }
 
-  // ==================== Category Management ====================
-
   @UseGuards(AuthGuard, PermissionsGuard)
   @Permissions([PermissionAction.MANAGE, PermissionResource.MOVIE])
   @Put(":event_id/category")

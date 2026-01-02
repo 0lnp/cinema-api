@@ -84,7 +84,6 @@ export const DeleteEventParamsDTOSchema = z.object({
 
 export type DeleteEventParamsDTO = z.infer<typeof DeleteEventParamsDTOSchema>;
 
-// Generic Event ID params schema (for category management etc.)
 export const EventIdParamsDTOSchema = z.object({
   event_id: z
     .string()
@@ -95,7 +94,6 @@ export const EventIdParamsDTOSchema = z.object({
 
 export type EventIdParamsDTO = z.infer<typeof EventIdParamsDTOSchema>;
 
-// Category management schemas
 export const SetCategoryBodyDTOSchema = z.object({
   category_id: z
     .string()
