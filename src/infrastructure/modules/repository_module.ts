@@ -12,9 +12,9 @@ import { RefreshTokenORMEntity } from "../databases/orm_entities/refresh_token_o
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import { TypeORMScreenRepository } from "../persistences/typeorm_screen_repository";
 import { ScreenORMEntity } from "../databases/orm_entities/screen_orm_entity";
-import { MovieRepository } from "src/domain/repositories/movie_repository";
-import { TypeormMovieRepository } from "../persistences/typeorm_movie_repository";
-import { MovieORMEntity } from "../databases/orm_entities/movie_orm_entity";
+import { EventRepository } from "src/domain/repositories/event_repository";
+import { TypeormEventRepository } from "../persistences/typeorm_event_repository";
+import { EventORMEntity } from "../databases/orm_entities/event_orm_entity";
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
 import { TypeormShowtimeRepository } from "../persistences/typeorm_showtime_repository";
 import { ShowtimeORMEntity } from "../databases/orm_entities/showtime_orm_entity";
@@ -24,6 +24,9 @@ import { BookingORMEntity } from "../databases/orm_entities/booking_orm_entity";
 import { SeatInventoryRepository } from "src/domain/repositories/seat_inventory_repository";
 import { TypeormSeatInventoryRepository } from "../persistences/typeorm_seat_inventory_repository";
 import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory_orm_entity";
+import { CategoryRepository } from "src/domain/repositories/category_repository";
+import { TypeormCategoryRepository } from "../persistences/typeorm_category_repository";
+import { CategoryORMEntity } from "../databases/orm_entities/category_orm_entity";
 
 @Module({
   imports: [
@@ -38,10 +41,11 @@ import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory
       UserORMEntity,
       RefreshTokenORMEntity,
       ScreenORMEntity,
-      MovieORMEntity,
+      EventORMEntity,
       ShowtimeORMEntity,
       BookingORMEntity,
       SeatInventoryORMEntity,
+      CategoryORMEntity,
     ]),
   ],
   providers: [
@@ -58,8 +62,8 @@ import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory
       useClass: TypeORMScreenRepository,
     },
     {
-      provide: MovieRepository.name,
-      useClass: TypeormMovieRepository,
+      provide: EventRepository.name,
+      useClass: TypeormEventRepository,
     },
     {
       provide: ShowtimeRepository.name,
@@ -73,15 +77,20 @@ import { SeatInventoryORMEntity } from "../databases/orm_entities/seat_inventory
       provide: SeatInventoryRepository.name,
       useClass: TypeormSeatInventoryRepository,
     },
+    {
+      provide: CategoryRepository.name,
+      useClass: TypeormCategoryRepository,
+    },
   ],
   exports: [
     UserRepository.name,
     RefreshTokenRepository.name,
     ScreenRepository.name,
-    MovieRepository.name,
+    EventRepository.name,
     ShowtimeRepository.name,
     BookingRepository.name,
     SeatInventoryRepository.name,
+    CategoryRepository.name,
   ],
 })
 export class RepositoryModule {}

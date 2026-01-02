@@ -19,7 +19,7 @@ import {
 export interface CreateResponse {
   id: string;
   screen_name: string;
-  movie_title: string;
+  event_title: string;
   start_time: string;
   end_time: string;
   pricing: number;
@@ -29,8 +29,8 @@ export interface CreateResponse {
 
 export interface GetResponse {
   id: string;
-  movie_id: string;
-  movie_title: string;
+  event_id: string;
+  event_title: string;
   screen_id: string;
   screen_name: string;
   start_time: string;
@@ -43,8 +43,8 @@ export interface GetResponse {
 export interface GetAllResponse {
   items: Array<{
     id: string;
-    movie_id: string;
-    movie_title: string;
+    event_id: string;
+    event_title: string;
     screen_id: string;
     screen_name: string;
     start_time: string;
@@ -73,7 +73,7 @@ export class ShowtimeMapper {
     body: PostShowtimeBodyDTO,
   ): Omit<CreateShowtimeDTO, "createdBy"> {
     return {
-      movieID: body.movie_id,
+      eventID: body.event_id,
       screenID: body.screen_id,
       startTime: body.start_time,
       pricing: body.pricing,
@@ -88,7 +88,7 @@ export class ShowtimeMapper {
       data: {
         id: result.id,
         screen_name: result.screenName,
-        movie_title: result.movieTitle,
+        event_title: result.eventTitle,
         start_time: result.startTime.toISOString(),
         end_time: result.endTime.toISOString(),
         pricing: result.pricing,
@@ -98,9 +98,7 @@ export class ShowtimeMapper {
     };
   }
 
-  public static toGetRequest(
-    params: GetShowtimeParamsDTO,
-  ): GetShowtimeDTO {
+  public static toGetRequest(params: GetShowtimeParamsDTO): GetShowtimeDTO {
     return {
       showtimeID: params.showtime_id,
     };
@@ -113,8 +111,8 @@ export class ShowtimeMapper {
       message: "Showtime retrieved successfully",
       data: {
         id: result.id,
-        movie_id: result.movieID,
-        movie_title: result.movieTitle,
+        event_id: result.eventID,
+        event_title: result.eventTitle,
         screen_id: result.screenID,
         screen_name: result.screenName,
         start_time: result.startTime.toISOString(),
@@ -134,8 +132,8 @@ export class ShowtimeMapper {
       data: {
         items: result.items.map((showtime) => ({
           id: showtime.id,
-          movie_id: showtime.movieID,
-          movie_title: showtime.movieTitle,
+          event_id: showtime.eventID,
+          event_title: showtime.eventTitle,
           screen_id: showtime.screenID,
           screen_name: showtime.screenName,
           start_time: showtime.startTime.toISOString(),

@@ -1,15 +1,15 @@
 import { ConfigService } from "@nestjs/config";
 import {
-  ExternalMovie,
-  MovieProvider,
-  MovieSearchResult,
-} from "src/domain/ports/movie_provider";
+  EventDetails,
+  EventProvider,
+  EventSearchResult,
+} from "src/domain/ports/event_provider";
 import { AppConfig } from "../configs/app_config";
 import {
   InfrastructureError,
   InfrastructureErrorCode,
 } from "src/shared/exceptions/infrastructure_error";
-import { MovieCertificate } from "src/domain/value_objects/movie_certificate";
+import { EventCertificate } from "src/domain/value_objects/event_certificate";
 import { validate } from "src/shared/utilities/validation";
 import {
   TMDBMovieDetailsDTO,
@@ -41,8 +41,8 @@ interface TMDBRequestLogContext {
   params: Record<string, unknown>;
 }
 
-export class TMDBMovieProvider implements MovieProvider {
-  private readonly logger = new Logger(TMDBMovieProvider.name);
+export class TMDBEventProvider implements EventProvider {
+  private readonly logger = new Logger(TMDBEventProvider.name);
   private readonly tmdbConfig: TMDBConfig;
 
   public constructor(
@@ -56,16 +56,13 @@ export class TMDBMovieProvider implements MovieProvider {
     };
   }
 
-  public async searchMovie(keyword: string): Promise<{
-    results: MovieSearchResult[];
-    resultCount: number;
-  }> {
+  public async searchEvent(keyword: string): Promise<EventSearchResult> {
     const url = `${
       this.tmdbConfig.apiBaseUrl
     }/search/movie?query=${encodeURIComponent(keyword)}`;
     const response = await this.executeWithLogging(
       {
-        operation: "searchMovie",
+        operation: "searchEvent",
         url,
         params: { keyword },
       },
@@ -73,7 +70,7 @@ export class TMDBMovieProvider implements MovieProvider {
     );
 
     if (!response.ok) {
-      await this.handleErrorResponse(response, "searchMovie", { keyword });
+      await this.handleErrorResponse(response, "searchEvent", { keyword });
     }
 
     try {
@@ -81,14 +78,14 @@ export class TMDBMovieProvider implements MovieProvider {
       const dto = validate(TMDBMovieSearchResultDTOSchema, data);
 
       return {
-        results: this.mapToMovieSearchResults(dto),
+        results: this.mapToEventSearchResults(dto),
         resultCount: dto.total_results <= 10 ? dto.total_results : 10,
       };
     } catch (error) {
       if (error instanceof ApplicationError) {
         throw new InfrastructureError({
           code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
-          message: `TMDB API returned invalid data for searchMovie with keyword "${keyword}": ${error.message}`,
+          message: `TMDB API returned invalid data for searchEvent with keyword "${keyword}": ${error.message}`,
           details: error.details,
         });
       }
@@ -97,13 +94,13 @@ export class TMDBMovieProvider implements MovieProvider {
     }
   }
 
-  public async movieOfID(externalID: string): Promise<ExternalMovie | null> {
+  public async getEventDetails(externalID: string): Promise<EventDetails | null> {
     const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(
       externalID,
     )}`;
     const response = await this.executeWithLogging(
       {
-        operation: "movieOfID",
+        operation: "getEventDetails",
         url,
         params: { externalID },
       },
@@ -114,19 +111,20 @@ export class TMDBMovieProvider implements MovieProvider {
       return null;
     }
     if (!response.ok) {
-      await this.handleErrorResponse(response, "movieOfID", { externalID });
+      await this.handleErrorResponse(response, "getEventDetails", { externalID });
     }
 
     try {
       const data = await response.json();
       const dto = validate(TMDBMovieDetailsDTOSchema, data);
+      const certificate = await this.getCertificate(externalID);
 
-      return this.mapToExternalMovie(dto);
+      return this.mapToEventDetails(dto, certificate);
     } catch (error) {
       if (error instanceof ApplicationError) {
         throw new InfrastructureError({
           code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
-          message: `TMDB API returned invalid data for movieOfID with ID ${externalID}: ${error.message}`,
+          message: `TMDB API returned invalid data for getEventDetails with ID ${externalID}: ${error.message}`,
           details: error.details,
         });
       }
@@ -135,44 +133,30 @@ export class TMDBMovieProvider implements MovieProvider {
     }
   }
 
-  public async certificate(externalID: string): Promise<string | null> {
+  private async getCertificate(externalID: string): Promise<EventCertificate> {
     const url = `${this.tmdbConfig.apiBaseUrl}/movie/${encodeURIComponent(
       externalID,
     )}/release_dates`;
     const response = await this.executeWithLogging(
       {
-        operation: "certifcate",
+        operation: "getCertificate",
         url,
         params: { externalID },
       },
       () => this.fetchWithTimeout(url),
     );
 
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      await this.handleErrorResponse(response, "certificate", { externalID });
+    if (response.status === 404 || !response.ok) {
+      return "PG"; // Default
     }
 
     try {
       const data = await response.json();
       const dto = validate(TMDBReleaseDatesDTOSchema, data);
-
       const certification = this.extractCertification(dto.results);
-      return certification !== ""
-        ? this.mapToMovieCertificate(certification)
-        : certification;
-    } catch (error) {
-      if (error instanceof ApplicationError) {
-        throw new InfrastructureError({
-          code: InfrastructureErrorCode.EXTERNAL_API_ERROR,
-          message: `TMDB API returned invalid data for certificate with ID ${externalID}: ${error.message}`,
-          details: error.details,
-        });
-      }
-
-      throw error;
+      return this.mapToEventCertificate(certification) ?? "PG";
+    } catch {
+      return "PG";
     }
   }
 
@@ -238,9 +222,9 @@ export class TMDBMovieProvider implements MovieProvider {
     });
   }
 
-  private mapToMovieSearchResults(
+  private mapToEventSearchResults(
     data: TMDBMovieSearchResultDTO,
-  ): MovieSearchResult[] {
+  ): EventSearchResult["results"] {
     return data.results.map((movie) => {
       const releaseYear = movie.release_date
         ? new Date(movie.release_date).getFullYear()
@@ -256,18 +240,21 @@ export class TMDBMovieProvider implements MovieProvider {
     });
   }
 
-  private mapToExternalMovie(data: TMDBMovieDetailsDTO): ExternalMovie {
+  private mapToEventDetails(
+    data: TMDBMovieDetailsDTO,
+    certificate: EventCertificate,
+  ): EventDetails {
     const releaseYear = data.release_date
       ? new Date(data.release_date).getFullYear()
       : 0;
 
     return {
-      externalID: String(data.id),
       title: data.title,
       synopsis: data.overview,
       durationMinutes: data.runtime,
       genres: data.genres.map((genre) => genre.name),
-      releaseYear: releaseYear,
+      certificate,
+      releaseYear,
       posterPath: data.poster_path ?? "",
     };
   }
@@ -311,21 +298,22 @@ export class TMDBMovieProvider implements MovieProvider {
     return anyWithCert?.certification ?? null;
   }
 
-  private mapToMovieCertificate(certifcate: string): MovieCertificate | null {
-    switch (certifcate) {
+  private mapToEventCertificate(certificate: string): EventCertificate | null {
+    switch (certificate) {
       case "SU":
       case "G":
+        return "G";
       case "PG":
-        return MovieCertificate.SU;
+        return "PG";
       case "13+":
       case "PG-13":
-        return MovieCertificate.R13;
+        return "PG-13";
       case "17+":
       case "R":
-        return MovieCertificate.D17;
+        return "R";
       case "21+":
       case "NC-17":
-        return MovieCertificate.D21;
+        return "NC-17";
       default:
         return null;
     }

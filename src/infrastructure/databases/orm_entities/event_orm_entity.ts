@@ -1,26 +1,27 @@
-import { type ORMEntity } from "src/shared/types/orm_entity";
-import { Column, Entity, ForeignKey, PrimaryColumn } from "typeorm";
-import { Movie } from "src/domain/aggregates/movie";
+import { Column, Entity, ForeignKey, ManyToOne, PrimaryColumn } from "typeorm";
 import { UserORMEntity } from "./user_orm_entity";
+import { CategoryORMEntity } from "./category_orm_entity";
 
-@Entity("movies")
-export class MovieORMEntity implements ORMEntity<Movie> {
+@Entity("events")
+export class EventORMEntity {
   @PrimaryColumn()
   public id!: string;
   @Column({ type: "varchar" })
+  public type!: string;
+  @Column({ type: "varchar" })
   public title!: string;
   @Column({ type: "text" })
-  public synopsis!: string;
+  public description!: string;
   @Column({ type: "numeric", name: "duration_minutes" })
   public durationMinutes!: number;
   @Column({ type: "simple-array" })
   public genres!: string[];
-  @Column({ type: "varchar" })
-  public certificate!: string;
-  @Column({ type: "numeric", name: "release_year" })
-  public releaseYear!: number;
-  @Column({ type: "varchar", name: "poster_path" })
-  public posterPath!: string;
+  @Column({ type: "varchar", name: "poster_path", nullable: true })
+  public posterPath!: string | null;
+  @Column({ type: "varchar", nullable: true })
+  public certificate!: string | null;
+  @Column({ type: "numeric", name: "release_year", nullable: true })
+  public releaseYear!: number | null;
   @Column({ type: "varchar" })
   public status!: string;
   @Column({ type: "timestamp", name: "created_at" })
@@ -35,4 +36,8 @@ export class MovieORMEntity implements ORMEntity<Movie> {
   @Column({ type: "varchar", name: "deleted_by", nullable: true })
   @ForeignKey(() => UserORMEntity, "id")
   public deletedBy!: string | null;
+  @Column({ type: "varchar", name: "category_id", nullable: true })
+  public categoryId!: string | null;
+  @ManyToOne(() => CategoryORMEntity, { nullable: true })
+  public category?: CategoryORMEntity;
 }

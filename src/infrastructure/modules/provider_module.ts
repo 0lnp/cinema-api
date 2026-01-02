@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
-import { MovieProvider } from "src/domain/ports/movie_provider";
-import { TMDBMovieProvider } from "../providers/tmdb_movie_provider";
+import { EventProvider } from "src/domain/ports/event_provider";
+import { TMDBEventProvider } from "../providers/tmdb_event_provider";
 
 @Module({
   providers: [
     {
-      provide: MovieProvider.name,
-      useClass: TMDBMovieProvider,
+      provide: EventProvider.name,
+      useClass: TMDBEventProvider,
     },
   ],
-  exports: [MovieProvider.name],
+  exports: [EventProvider.name],
 })
 export class ProviderModule {}

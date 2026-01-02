@@ -1,6 +1,6 @@
 import { type Money } from "src/domain/value_objects/money";
 import { Column, Entity, ForeignKey, PrimaryColumn } from "typeorm";
-import { MovieORMEntity } from "./movie_orm_entity";
+import { EventORMEntity } from "./event_orm_entity";
 import { ScreenORMEntity } from "./screen_orm_entity";
 import { UserORMEntity } from "./user_orm_entity";
 
@@ -8,9 +8,9 @@ import { UserORMEntity } from "./user_orm_entity";
 export class ShowtimeORMEntity {
   @PrimaryColumn()
   public id!: string;
-  @Column({ type: "varchar", name: "movie_id" })
-  @ForeignKey(() => MovieORMEntity, "id")
-  public movieID!: string;
+  @Column({ type: "varchar", name: "event_id" })
+  @ForeignKey(() => EventORMEntity, "id")
+  public eventID!: string;
   @Column({ type: "varchar", name: "screen_id" })
   @ForeignKey(() => ScreenORMEntity, "id")
   public screenID!: string;

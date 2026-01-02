@@ -1,6 +1,6 @@
 import { ClassProps } from "src/shared/types/class_props";
 import { Money } from "../value_objects/money";
-import { MovieID } from "../value_objects/movie_id";
+import { EventID } from "../value_objects/event_id";
 import { ScreenID } from "../value_objects/screen_id";
 import { ShowtimeID } from "../value_objects/showtime_id";
 import { ShowtimeStatus } from "../value_objects/showtime_status";
@@ -19,7 +19,7 @@ type ShowtimeCreateProps = Omit<
 
 export class Showtime {
   public readonly id: ShowtimeID;
-  public readonly movieID: MovieID;
+  public readonly eventID: EventID;
   public readonly screenID: ScreenID;
   public readonly timeSlot: TimeSlot;
   private _pricing: Money;
@@ -32,7 +32,7 @@ export class Showtime {
 
   public constructor(props: ClassProps<Showtime>) {
     this.id = props.id;
-    this.movieID = props.movieID;
+    this.eventID = props.eventID;
     this.screenID = props.screenID;
     this.timeSlot = props.timeSlot;
     this._pricing = props.pricing;

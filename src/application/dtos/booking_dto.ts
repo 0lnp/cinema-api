@@ -41,7 +41,7 @@ export interface GetBookingResult {
   id: string;
   customerId: string;
   showtimeId: string;
-  movieTitle: string;
+  eventTitle: string;
   screenName: string;
   startTime: Date;
   endTime: Date;
@@ -66,7 +66,7 @@ export interface GetUserBookingsRequest {
 export interface BookingListItem {
   id: string;
   showtimeId: string;
-  movieTitle: string;
+  eventTitle: string;
   screenName: string;
   startTime: Date;
   seatCount: number;

@@ -63,15 +63,16 @@ export class ShowtimeController {
     ]),
   )
   async getShowtimes(
-    @Query(new ZodValidationPipe(GetShowtimesQueryDTOSchema)) query: GetShowtimesQueryDTO,
+    @Query(new ZodValidationPipe(GetShowtimesQueryDTOSchema))
+    query: GetShowtimesQueryDTO,
   ) {
-    const { screen_id, movie_id, date, status, ...paginatedQuery } =
+    const { screen_id, event_id, date, status, ...paginatedQuery } =
       query as PaginatedQuery<ShowtimeSortField> & GetShowtimesQueryDTO;
     const result = await this.showtimeService.getAllShowtimes({
       query: paginatedQuery,
       filters: {
         screenID: screen_id,
-        movieID: movie_id,
+        eventID: event_id,
         date,
         status,
       },
@@ -87,7 +88,8 @@ export class ShowtimeController {
   )
   @Get(":showtime_id")
   async getShowtime(
-    @Param(new ZodValidationPipe(GetShowtimeParamsDTOSchema)) params: GetShowtimeParamsDTO,
+    @Param(new ZodValidationPipe(GetShowtimeParamsDTOSchema))
+    params: GetShowtimeParamsDTO,
   ) {
     const dto = ShowtimeMapper.toGetRequest(params);
     const result = await this.showtimeService.getShowtime(dto);
@@ -102,7 +104,8 @@ export class ShowtimeController {
   @Post()
   async postShowtime(
     @Request() req: TRequest,
-    @Body(new ZodValidationPipe(PostShowtimeBodyDTOSchema)) body: PostShowtimeBodyDTO,
+    @Body(new ZodValidationPipe(PostShowtimeBodyDTOSchema))
+    body: PostShowtimeBodyDTO,
   ) {
     const dto = ShowtimeMapper.toCreateRequest(body);
     const result = await this.showtimeService.createShowtime({
@@ -116,8 +119,10 @@ export class ShowtimeController {
   @Permissions([PermissionAction.MANAGE, PermissionResource.SHOWTIME])
   @Patch(":showtime_id")
   async patchShowtime(
-    @Param(new ZodValidationPipe(PatchShowtimeParamsDTOSchema)) params: PatchShowtimeParamsDTO,
-    @Body(new ZodValidationPipe(PatchShowtimeBodyDTOSchema)) body: PatchShowtimeBodyDTO,
+    @Param(new ZodValidationPipe(PatchShowtimeParamsDTOSchema))
+    params: PatchShowtimeParamsDTO,
+    @Body(new ZodValidationPipe(PatchShowtimeBodyDTOSchema))
+    body: PatchShowtimeBodyDTO,
   ) {
     const dto = ShowtimeMapper.toUpdateRequest(params, body);
     const result = await this.showtimeService.updateShowtime(dto);
@@ -129,7 +134,8 @@ export class ShowtimeController {
   @Delete(":showtime_id")
   async deleteShowtime(
     @Request() req: TRequest,
-    @Param(new ZodValidationPipe(DeleteShowtimeParamsDTOSchema)) params: DeleteShowtimeParamsDTO,
+    @Param(new ZodValidationPipe(DeleteShowtimeParamsDTOSchema))
+    params: DeleteShowtimeParamsDTO,
   ) {
     const result = await this.showtimeService.deleteShowtime({
       showtimeID: params.showtime_id,

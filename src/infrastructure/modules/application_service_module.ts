@@ -8,9 +8,10 @@ import { DomainServiceModule } from "./domain_service_module";
 import { ScreenApplicationService } from "src/application/services/screen_application_service";
 import { UserLogoutApplicationService } from "src/application/services/user_logout_application_service";
 import { UserProfileApplicationService } from "src/application/services/user_profile_application_service";
-import { MovieApplicationService } from "src/application/services/movie_application_service";
+import { EventApplicationService } from "src/application/services/event_application_service";
 import { ShowtimeApplicationService } from "src/application/services/showtime_application_service";
 import { BookingApplicationService } from "src/application/services/booking_application_service";
+import { CategoryApplicationService } from "src/application/services/category_application_service";
 import { ProviderModule } from "./provider_module";
 import { EventModule } from "./event_module";
 
@@ -48,8 +49,8 @@ import { EventModule } from "./event_module";
       useClass: ScreenApplicationService,
     },
     {
-      provide: MovieApplicationService.name,
-      useClass: MovieApplicationService,
+      provide: EventApplicationService.name,
+      useClass: EventApplicationService,
     },
     {
       provide: ShowtimeApplicationService.name,
@@ -59,6 +60,7 @@ import { EventModule } from "./event_module";
       provide: BookingApplicationService.name,
       useClass: BookingApplicationService,
     },
+    CategoryApplicationService,
   ],
   exports: [
     UserRegisterApplicationService.name,
@@ -67,9 +69,10 @@ import { EventModule } from "./event_module";
     ScreenApplicationService.name,
     UserLogoutApplicationService.name,
     UserProfileApplicationService.name,
-    MovieApplicationService.name,
+    EventApplicationService.name,
     ShowtimeApplicationService.name,
     BookingApplicationService.name,
+    CategoryApplicationService,
   ],
 })
 export class ApplicationServiceModule {}
