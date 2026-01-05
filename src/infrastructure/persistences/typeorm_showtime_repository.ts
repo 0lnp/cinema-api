@@ -15,7 +15,7 @@ import {
 } from "src/domain/repositories/showtime_repository";
 import { Showtime } from "src/domain/aggregates/showtime";
 import { ShowtimeID } from "src/domain/value_objects/showtime_id";
-import { MovieID } from "src/domain/value_objects/movie_id";
+import { EventID } from "src/domain/value_objects/event_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
 import { TimeSlot } from "src/domain/value_objects/time_slot";
 import { Money } from "src/domain/value_objects/money";
@@ -80,8 +80,8 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
       where.screenID = filters.screenID.value;
     }
 
-    if (filters?.movieID) {
-      where.movieID = filters.movieID.value;
+    if (filters?.eventID) {
+      where.eventID = filters.eventID.value;
     }
 
     if (filters?.status) {
@@ -123,11 +123,11 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
     };
   }
 
-  public async upcomingShowtimesOfMovie(movieID: MovieID): Promise<Showtime[]> {
+  public async upcomingShowtimesOfEvent(eventID: EventID): Promise<Showtime[]> {
     const now = new Date();
     const showtimes = await this.ormRepository.find({
       where: {
-        movieID: movieID.value,
+        eventID: eventID.value,
         timeStart: MoreThan(now),
         deletedAt: IsNull(),
         status: ShowtimeStatus.SCHEDULED,
@@ -161,7 +161,7 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
   private toDomain(showtime: ShowtimeORMEntity): Showtime {
     return new Showtime({
       id: new ShowtimeID(showtime.id),
-      movieID: new MovieID(showtime.movieID),
+      eventID: new EventID(showtime.eventID),
       screenID: new ScreenID(showtime.screenID),
       timeSlot: new TimeSlot(showtime.timeStart, showtime.timeEnd),
       pricing: showtime.pricing as Money,
@@ -178,7 +178,7 @@ export class TypeormShowtimeRepository implements ShowtimeRepository {
   private toPersistence(showtime: Showtime): ShowtimeORMEntity {
     return {
       id: showtime.id.value,
-      movieID: showtime.movieID.value,
+      eventID: showtime.eventID.value,
       screenID: showtime.screenID.value,
       timeStart: showtime.timeSlot.timeStart,
       timeEnd: showtime.timeSlot.timeEnd,

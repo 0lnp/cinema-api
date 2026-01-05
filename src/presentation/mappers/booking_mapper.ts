@@ -44,7 +44,7 @@ export interface GetBookingResponse {
   id: string;
   customer_id: string;
   showtime_id: string;
-  movie_title: string;
+  event_title: string;
   screen_name: string;
   start_time: string;
   end_time: string;
@@ -64,7 +64,7 @@ export interface GetBookingResponse {
 export interface BookingListItemResponse {
   id: string;
   showtime_id: string;
-  movie_title: string;
+  event_title: string;
   screen_name: string;
   start_time: string;
   seat_count: number;
@@ -138,7 +138,7 @@ export class BookingMapper {
         id: result.id,
         customer_id: result.customerId,
         showtime_id: result.showtimeId,
-        movie_title: result.movieTitle,
+        event_title: result.eventTitle,
         screen_name: result.screenName,
         start_time: result.startTime.toISOString(),
         end_time: result.endTime.toISOString(),
@@ -171,7 +171,7 @@ export class BookingMapper {
         items: result.items.map((item) => ({
           id: item.id,
           showtime_id: item.showtimeId,
-          movie_title: item.movieTitle,
+          event_title: item.eventTitle,
           screen_name: item.screenName,
           start_time: item.startTime.toISOString(),
           seat_count: item.seatCount,

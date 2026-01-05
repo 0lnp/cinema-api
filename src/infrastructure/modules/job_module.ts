@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AppConfig } from "../configs/app_config";
-import { MovieStatusProcessor } from "../jobs/processors/movie_status_processor";
+import { EventStatusProcessor } from "../jobs/processors/event_status_processor";
 import { TokenCleanupProcessor } from "../jobs/processors/token_cleanup_processor";
 import { BookingProcessor } from "../jobs/processors/booking_processor";
 import { BookingExpirationProcessor } from "../jobs/processors/booking_expiration_processor";
@@ -28,7 +28,7 @@ import { EventModule } from "./event_module";
       inject: [ConfigService],
     }),
     BullModule.registerQueue(
-      { name: "movie-status" },
+      { name: "event-status" },
       { name: "token-cleanup" },
       { name: "booking-processing" },
       { name: "booking-expiration" },
@@ -38,7 +38,7 @@ import { EventModule } from "./event_module";
     EventModule,
   ],
   providers: [
-    MovieStatusProcessor,
+    EventStatusProcessor,
     TokenCleanupProcessor,
     BookingProcessor,
     BookingExpirationProcessor,

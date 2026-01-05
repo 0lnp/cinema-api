@@ -43,6 +43,10 @@ export class User {
     return rolePermissions.some((rp) => rp.implies(permission));
   }
 
+  public updateLastLoginAt() {
+    this._lastLoginAt = new Date();
+  }
+
   public get lastLoginAt(): Date | null {
     return this._lastLoginAt;
   }

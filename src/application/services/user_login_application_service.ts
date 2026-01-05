@@ -16,6 +16,7 @@ import { TokenHasher } from "src/domain/ports/token_hasher";
 import { TokenGenerator } from "src/domain/ports/token_generator";
 import { RefreshToken } from "src/domain/aggregates/refresh_token";
 import { RefreshTokenRepository } from "src/domain/repositories/refresh_token_repository";
+import { UnitOfWork } from "src/domain/ports/unit_of_work";
 
 export class UserLoginApplicationService {
   public constructor(
@@ -29,6 +30,8 @@ export class UserLoginApplicationService {
     private readonly refreshTokenRepository: RefreshTokenRepository,
     @Inject(TokenHasher.name)
     private readonly tokenHasher: TokenHasher,
+    @Inject(UnitOfWork.name)
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   public async execute(request: UserLoginDTO): Promise<UserLoginResult> {
@@ -78,12 +81,17 @@ export class UserLoginApplicationService {
       expiresAt: refreshTokenExpiresAt,
     });
 
-    await this.refreshTokenRepository.save(refreshToken);
+    return this.unitOfWork.runInTransaction(async () => {
+      user.updateLastLoginAt();
 
-    return {
-      message: "User logged in successfully",
-      accessToken,
-      refreshToken: rawRefreshToken,
-    };
+      await this.userRepository.save(user);
+      await this.refreshTokenRepository.save(refreshToken);
+
+      return {
+        message: "User logged in successfully",
+        accessToken,
+        refreshToken: rawRefreshToken,
+      };
+    });
   }
 }

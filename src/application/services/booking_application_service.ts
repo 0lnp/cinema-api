@@ -2,12 +2,13 @@ import { Inject } from "@nestjs/common";
 import { BookingRepository } from "src/domain/repositories/booking_repository";
 import { SeatInventoryRepository } from "src/domain/repositories/seat_inventory_repository";
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
-import { MovieRepository } from "src/domain/repositories/movie_repository";
+import { EventRepository } from "src/domain/repositories/event_repository";
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import { UserRepository } from "src/domain/repositories/user_repository";
 import { DomainEventPublisher } from "src/domain/ports/domain_event_publisher";
 import { PaymentGateway } from "src/domain/ports/payment_gateway";
 import { ObjectStorage } from "src/domain/ports/object_storage";
+import { UnitOfWork } from "src/domain/ports/unit_of_work";
 import { Booking } from "src/domain/aggregates/booking";
 import { SeatInventory } from "src/domain/aggregates/seat_inventory";
 import { CurrencyCode, Money } from "src/domain/value_objects/money";
@@ -42,7 +43,7 @@ import { ConfigService } from "@nestjs/config";
 import { AppConfig } from "src/infrastructure/configs/app_config";
 import { ShowtimeStatus } from "src/domain/value_objects/showtime_status";
 import { ShowtimeID } from "src/domain/value_objects/showtime_id";
-import { MovieID } from "src/domain/value_objects/movie_id";
+import { EventID } from "src/domain/value_objects/event_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
 import { StoragePath } from "src/domain/value_objects/storage_path";
 
@@ -54,8 +55,8 @@ export class BookingApplicationService {
     private readonly seatInventoryRepository: SeatInventoryRepository,
     @Inject(ShowtimeRepository.name)
     private readonly showtimeRepository: ShowtimeRepository,
-    @Inject(MovieRepository.name)
-    private readonly movieRepository: MovieRepository,
+    @Inject(EventRepository.name)
+    private readonly eventRepository: EventRepository,
     @Inject(ScreenRepository.name)
     private readonly screenRepository: ScreenRepository,
     @Inject(UserRepository.name)
@@ -68,6 +69,8 @@ export class BookingApplicationService {
     private readonly objectStorage: ObjectStorage,
     @Inject(ConfigService)
     private readonly config: ConfigService<AppConfig, true>,
+    @Inject(UnitOfWork.name)
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   public async createBooking(
@@ -137,7 +140,6 @@ export class BookingApplicationService {
     const holdUntil = new Date(Date.now() + holdUntilMs);
 
     seatInventory.holdSeats(dto.seatNumbers, bookingId, holdUntil);
-    await this.seatInventoryRepository.save(seatInventory);
 
     const pricePerSeat = showtime.pricing;
     const ticketInfos = dto.seatNumbers.map((seatNumber) => ({
@@ -159,7 +161,10 @@ export class BookingApplicationService {
       serviceFee,
     });
 
-    await this.bookingRepository.save(booking);
+    await this.unitOfWork.runInTransaction(async () => {
+      await this.seatInventoryRepository.save(seatInventory);
+      await this.bookingRepository.save(booking);
+    });
 
     this.eventPublisher.publish(
       new BookingCreatedEvent(
@@ -199,8 +204,8 @@ export class BookingApplicationService {
     const showtime = await this.showtimeRepository.showtimeOfID(
       booking.showtimeId,
     );
-    const movie = showtime
-      ? await this.movieRepository.movieOfID(showtime.movieID)
+    const event = showtime
+      ? await this.eventRepository.eventOfID(showtime.eventID)
       : null;
     const screen = showtime
       ? await this.screenRepository.screenOfID(showtime.screenID)
@@ -211,7 +216,7 @@ export class BookingApplicationService {
       id: booking.id.value,
       customerId: booking.customerId.value,
       showtimeId: booking.showtimeId.value,
-      movieTitle: movie?.title ?? "Unknown",
+      eventTitle: event?.title ?? "Unknown",
       screenName: screen?.name ?? "Unknown",
       startTime: showtime?.timeSlot.timeStart ?? new Date(),
       endTime: showtime?.timeSlot.timeEnd ?? new Date(),
@@ -251,9 +256,9 @@ export class BookingApplicationService {
       ),
     );
 
-    const movieIds = [
+    const eventIds = [
       ...new Set(
-        showtimes.filter((s) => s !== null).map((s) => s!.movieID.value),
+        showtimes.filter((s) => s !== null).map((s) => s!.eventID.value),
       ),
     ];
     const screenIds = [
@@ -262,9 +267,9 @@ export class BookingApplicationService {
       ),
     ];
 
-    const [movies, screens] = await Promise.all([
+    const [events, screens] = await Promise.all([
       Promise.all(
-        movieIds.map((id) => this.movieRepository.movieOfID(new MovieID(id))),
+        eventIds.map((id) => this.eventRepository.eventOfID(new EventID(id))),
       ),
       Promise.all(
         screenIds.map((id) =>
@@ -276,8 +281,8 @@ export class BookingApplicationService {
     const showtimeMap = new Map(
       showtimes.filter((s) => s !== null).map((s) => [s!.id.value, s!]),
     );
-    const movieMap = new Map(
-      movies.filter((m) => m !== null).map((m) => [m!.id.value, m!]),
+    const eventMap = new Map(
+      events.filter((e) => e !== null).map((e) => [e!.id.value, e!]),
     );
     const screenMap = new Map(
       screens.filter((s) => s !== null).map((s) => [s!.id.value, s!]),
@@ -287,8 +292,8 @@ export class BookingApplicationService {
       message: "User bookings retrieved successfully",
       items: result.items.map((booking) => {
         const showtime = showtimeMap.get(booking.showtimeId.value);
-        const movie = showtime
-          ? movieMap.get(showtime.movieID.value)
+        const event = showtime
+          ? eventMap.get(showtime.eventID.value)
           : undefined;
         const screen = showtime
           ? screenMap.get(showtime.screenID.value)
@@ -297,7 +302,7 @@ export class BookingApplicationService {
         return {
           id: booking.id.value,
           showtimeId: booking.showtimeId.value,
-          movieTitle: movie?.title ?? "Unknown",
+          eventTitle: event?.title ?? "Unknown",
           screenName: screen?.name ?? "Unknown",
           startTime: showtime?.timeSlot.timeStart ?? new Date(),
           seatCount: booking.ticketCount,
@@ -415,10 +420,14 @@ export class BookingApplicationService {
         );
       if (seatInventory !== null) {
         seatInventory.reserveSeats(booking.seatNumbers, booking.id);
-        await this.seatInventoryRepository.save(seatInventory);
       }
 
-      await this.bookingRepository.save(booking);
+      await this.unitOfWork.runInTransaction(async () => {
+        if (seatInventory !== null) {
+          await this.seatInventoryRepository.save(seatInventory);
+        }
+        await this.bookingRepository.save(booking);
+      });
 
       this.eventPublisher.publish(
         new BookingConfirmedEvent(
@@ -436,10 +445,14 @@ export class BookingApplicationService {
         );
       if (seatInventory !== null) {
         seatInventory.releaseSeats(booking.seatNumbers, booking.id);
-        await this.seatInventoryRepository.save(seatInventory);
       }
 
-      await this.bookingRepository.save(booking);
+      await this.unitOfWork.runInTransaction(async () => {
+        if (seatInventory !== null) {
+          await this.seatInventoryRepository.save(seatInventory);
+        }
+        await this.bookingRepository.save(booking);
+      });
 
       this.eventPublisher.publish(
         new BookingCancelledEvent(booking.id, booking.cancelledAt!),
@@ -487,10 +500,14 @@ export class BookingApplicationService {
       );
     if (seatInventory !== null) {
       seatInventory.releaseSeats(booking.seatNumbers, booking.id);
-      await this.seatInventoryRepository.save(seatInventory);
     }
 
-    await this.bookingRepository.save(booking);
+    await this.unitOfWork.runInTransaction(async () => {
+      if (seatInventory !== null) {
+        await this.seatInventoryRepository.save(seatInventory);
+      }
+      await this.bookingRepository.save(booking);
+    });
 
     this.eventPublisher.publish(
       new BookingCancelledEvent(booking.id, booking.cancelledAt!),
@@ -594,9 +611,9 @@ export class BookingApplicationService {
       ),
     );
 
-    const movieIds = [
+    const eventIds = [
       ...new Set(
-        showtimes.filter((s) => s !== null).map((s) => s!.movieID.value),
+        showtimes.filter((s) => s !== null).map((s) => s!.eventID.value),
       ),
     ];
     const screenIds = [
@@ -605,9 +622,9 @@ export class BookingApplicationService {
       ),
     ];
 
-    const [movies, screens] = await Promise.all([
+    const [events, screens] = await Promise.all([
       Promise.all(
-        movieIds.map((id) => this.movieRepository.movieOfID(new MovieID(id))),
+        eventIds.map((id) => this.eventRepository.eventOfID(new EventID(id))),
       ),
       Promise.all(
         screenIds.map((id) =>
@@ -619,8 +636,8 @@ export class BookingApplicationService {
     const showtimeMap = new Map(
       showtimes.filter((s) => s !== null).map((s) => [s!.id.value, s!]),
     );
-    const movieMap = new Map(
-      movies.filter((m) => m !== null).map((m) => [m!.id.value, m!]),
+    const eventMap = new Map(
+      events.filter((e) => e !== null).map((e) => [e!.id.value, e!]),
     );
     const screenMap = new Map(
       screens.filter((s) => s !== null).map((s) => [s!.id.value, s!]),
@@ -630,8 +647,8 @@ export class BookingApplicationService {
       message: "Bookings retrieved successfully",
       items: result.items.map((booking) => {
         const showtime = showtimeMap.get(booking.showtimeId.value);
-        const movie = showtime
-          ? movieMap.get(showtime.movieID.value)
+        const event = showtime
+          ? eventMap.get(showtime.eventID.value)
           : undefined;
         const screen = showtime
           ? screenMap.get(showtime.screenID.value)
@@ -640,7 +657,7 @@ export class BookingApplicationService {
         return {
           id: booking.id.value,
           showtimeId: booking.showtimeId.value,
-          movieTitle: movie?.title ?? "Unknown",
+          eventTitle: event?.title ?? "Unknown",
           screenName: screen?.name ?? "Unknown",
           startTime: showtime?.timeSlot.timeStart ?? new Date(),
           seatCount: booking.ticketCount,

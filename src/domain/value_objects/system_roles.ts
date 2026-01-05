@@ -37,6 +37,7 @@ export class SystemRoles {
     const adminPermissions: NonEmptyArray<Permission> = [
       ...managerPermissions,
       new Permission(PermissionAction.MANAGE, PermissionResource.USER),
+      new Permission(PermissionAction.MANAGE, PermissionResource.BOOKING),
     ];
 
     return {

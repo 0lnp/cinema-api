@@ -1,5 +1,5 @@
 import { Showtime } from "../aggregates/showtime";
-import { MovieID } from "../value_objects/movie_id";
+import { EventID } from "../value_objects/event_id";
 import { ScreenID } from "../value_objects/screen_id";
 import { ShowtimeID } from "../value_objects/showtime_id";
 import { ShowtimeStatus } from "../value_objects/showtime_status";
@@ -9,7 +9,7 @@ export type ShowtimeSortField = "timeStart" | "createdAt" | "basePrice";
 
 export interface ShowtimeSearchFilters {
   screenID?: ScreenID;
-  movieID?: MovieID;
+  eventID?: EventID;
   date?: string; // YYYY-MM-DD
   status?: ShowtimeStatus;
 }
@@ -24,8 +24,8 @@ export abstract class ShowtimeRepository {
     query: PaginatedQuery<ShowtimeSortField>,
     filters?: ShowtimeSearchFilters,
   ): Promise<PaginatedResult<Showtime>>;
-  public abstract upcomingShowtimesOfMovie(
-    movieID: MovieID,
+  public abstract upcomingShowtimesOfEvent(
+    eventID: EventID,
   ): Promise<Showtime[]>;
   public abstract nextIdentity(): Promise<ShowtimeID>;
   public abstract save(showtime: Showtime): Promise<void>;

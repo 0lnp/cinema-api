@@ -7,8 +7,8 @@ import { ShowtimeScheduledEvent } from "src/domain/events/showtime_scheduled_eve
 @Injectable()
 export class ShowtimeEventHandler {
   public constructor(
-    @InjectQueue("movie-status")
-    private readonly movieStatusQueue: Queue,
+    @InjectQueue("event-status")
+    private readonly eventStatusQueue: Queue,
   ) {}
 
   @OnEvent("showtime.scheduled")
@@ -20,10 +20,10 @@ export class ShowtimeEventHandler {
     const startDelay = event.startTime.getTime() - now.getTime();
 
     if (startDelay > 0) {
-      await this.movieStatusQueue.add(
+      await this.eventStatusQueue.add(
         "update-to-now-showing",
         {
-          movieID: event.movieID.value,
+          eventID: event.eventID.value,
           showtimeID: event.showtimeID.value,
         },
         {
@@ -38,10 +38,10 @@ export class ShowtimeEventHandler {
     const endDelay = event.endTime.getTime() - now.getTime();
 
     if (endDelay > 0) {
-      await this.movieStatusQueue.add(
+      await this.eventStatusQueue.add(
         "check-ended-run",
         {
-          movieID: event.movieID.value,
+          eventID: event.eventID.value,
           showtimeID: event.showtimeID.value,
         },
         {

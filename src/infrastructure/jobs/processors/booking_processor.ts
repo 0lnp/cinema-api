@@ -3,7 +3,7 @@ import { Inject, Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { BookingRepository } from "src/domain/repositories/booking_repository";
 import { ShowtimeRepository } from "src/domain/repositories/showtime_repository";
-import { MovieRepository } from "src/domain/repositories/movie_repository";
+import { EventRepository } from "src/domain/repositories/event_repository";
 import { ScreenRepository } from "src/domain/repositories/screen_repository";
 import { UserRepository } from "src/domain/repositories/user_repository";
 import { DomainEventPublisher } from "src/domain/ports/domain_event_publisher";
@@ -47,8 +47,8 @@ export class BookingProcessor extends WorkerHost {
     private readonly bookingRepository: BookingRepository,
     @Inject(ShowtimeRepository.name)
     private readonly showtimeRepository: ShowtimeRepository,
-    @Inject(MovieRepository.name)
-    private readonly movieRepository: MovieRepository,
+    @Inject(EventRepository.name)
+    private readonly eventRepository: EventRepository,
     @Inject(ScreenRepository.name)
     private readonly screenRepository: ScreenRepository,
     @Inject(UserRepository.name)
@@ -117,8 +117,8 @@ export class BookingProcessor extends WorkerHost {
       throw new Error(`Showtime ${booking.showtimeId.value} not found`);
     }
 
-    const [movie, screen] = await Promise.all([
-      this.movieRepository.movieOfID(showtime.movieID),
+    const [event, screen] = await Promise.all([
+      this.eventRepository.eventOfID(showtime.eventID),
       this.screenRepository.screenOfID(showtime.screenID),
     ]);
 
@@ -141,7 +141,7 @@ export class BookingProcessor extends WorkerHost {
         {
           bookingId: booking.id.value,
           ticketCode,
-          movieTitle: movie?.title ?? "Unknown",
+          movieTitle: event?.title ?? "Unknown",
           screenName: screen?.name ?? "Unknown",
           showtimeStart: showtime.timeSlot.timeStart,
           showtimeEnd: showtime.timeSlot.timeEnd,
@@ -166,7 +166,7 @@ export class BookingProcessor extends WorkerHost {
 
     const invoiceBuffer = await this.ticketGenerator.generateInvoicePDF({
       bookingId: booking.id.value,
-      movieTitle: movie?.title ?? "Unknown",
+      movieTitle: event?.title ?? "Unknown",
       screenName: screen?.name ?? "Unknown",
       showtimeStart: showtime.timeSlot.timeStart,
       showtimeEnd: showtime.timeSlot.timeEnd,
@@ -230,7 +230,7 @@ export class BookingProcessor extends WorkerHost {
       throw new Error("Required entities not found");
     }
 
-    const movie = await this.movieRepository.movieOfID(showtime.movieID);
+    const event = await this.eventRepository.eventOfID(showtime.eventID);
 
     const invoicePath = StoragePath.fromPersistence(data.invoicePath);
 
@@ -251,7 +251,7 @@ export class BookingProcessor extends WorkerHost {
       recipientEmail: user.email,
       recipientName: user.displayName,
       bookingId: booking.id.value,
-      movieTitle: movie?.title ?? "Unknown",
+      movieTitle: event?.title ?? "Unknown",
       showtimeDetails: `${showtime.timeSlot.timeStart.toLocaleString()}`,
       seatNumbers: booking.seatNumbers,
       totalAmount: booking.totalAmount,
@@ -301,15 +301,15 @@ export class BookingProcessor extends WorkerHost {
       throw new Error("User not found");
     }
 
-    const movie = showtime
-      ? await this.movieRepository.movieOfID(showtime.movieID)
+    const event = showtime
+      ? await this.eventRepository.eventOfID(showtime.eventID)
       : null;
 
     await this.emailSender.sendCancellationEmail({
       recipientEmail: user.email,
       recipientName: user.displayName,
       bookingId: booking.id.value,
-      movieTitle: movie?.title ?? "Unknown",
+      movieTitle: event?.title ?? "Unknown",
     });
 
     this.logger.log(`Cancellation email sent for booking "${data.bookingId}"`);

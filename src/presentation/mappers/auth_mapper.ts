@@ -17,6 +17,7 @@ import {
   RefreshTokenResult,
 } from "src/application/dtos/refresh_token_dto";
 import { type UserProfileResult } from "src/application/dtos/user_profile_dto";
+import { type UserLogoutResult } from "src/application/dtos/user_logout_dto";
 
 export interface RegisterResponse {
   user_id: string;
@@ -41,10 +42,15 @@ export interface ProfileResponse {
   registered_at: string;
 }
 
+export interface LogoutResponse {
+  logged_out: boolean;
+}
+
 export class AuthMapper {
   public static toRegisterRequest(body: RegisterBodyDTO): UserRegisterDTO {
     return {
       displayName: body.display_name,
+      fullName: body.full_name,
       email: body.email,
       password: body.password,
     };
@@ -110,6 +116,17 @@ export class AuthMapper {
         role_name: result.roleName,
         last_login_at: result.lastLoginAt?.toISOString() ?? null,
         registered_at: result.registeredAt.toISOString(),
+      },
+    };
+  }
+
+  public static toLogoutResponse(
+    result: UserLogoutResult,
+  ): BaseSuccessfulResponse<LogoutResponse> {
+    return {
+      message: result.message,
+      data: {
+        logged_out: true,
       },
     };
   }

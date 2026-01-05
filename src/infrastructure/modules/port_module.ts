@@ -16,6 +16,8 @@ import { PdfTicketGeneratorAdapter } from "../providers/pdf_ticket_generator_ada
 import { EmailSender } from "src/domain/ports/email_sender";
 import { SmtpEmailAdapter } from "../providers/smtp_email_adapter";
 import { InfraModule } from "./infra_module";
+import { UnitOfWork } from "src/domain/ports/unit_of_work";
+import { TypeormUnitOfWork } from "../persistences/typeorm_unit_of_work";
 
 @Module({
   imports: [InfraModule],
@@ -52,6 +54,10 @@ import { InfraModule } from "./infra_module";
       provide: EmailSender.name,
       useClass: SmtpEmailAdapter,
     },
+    {
+      provide: UnitOfWork.name,
+      useClass: TypeormUnitOfWork,
+    },
   ],
   exports: [
     PasswordHasher.name,
@@ -62,6 +68,8 @@ import { InfraModule } from "./infra_module";
     ObjectStorage.name,
     TicketGenerator.name,
     EmailSender.name,
+    UnitOfWork.name,
   ],
 })
 export class PortModule {}
+

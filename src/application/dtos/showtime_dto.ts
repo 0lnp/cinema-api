@@ -1,4 +1,4 @@
-import { MovieID } from "src/domain/value_objects/movie_id";
+import { EventID } from "src/domain/value_objects/event_id";
 import { ScreenID } from "src/domain/value_objects/screen_id";
 import { ShowtimeID } from "src/domain/value_objects/showtime_id";
 import { ShowtimeStatus } from "src/domain/value_objects/showtime_status";
@@ -8,7 +8,7 @@ import { PaginatedQuery, PaginatedResult } from "src/shared/types/pagination";
 
 export interface CreateShowtimeDTO {
   createdBy: UserID;
-  movieID: MovieID;
+  eventID: EventID;
   screenID: ScreenID;
   startTime: Date;
   pricing: number;
@@ -18,7 +18,7 @@ export interface CreateShowtimeResult {
   message: string;
   id: string;
   screenName: string;
-  movieTitle: string;
+  eventTitle: string;
   startTime: Date;
   endTime: Date;
   pricing: number;
@@ -32,8 +32,8 @@ export interface GetShowtimeDTO {
 
 export interface GetShowtimeResult {
   id: string;
-  movieID: string;
-  movieTitle: string;
+  eventID: string;
+  eventTitle: string;
   screenID: string;
   screenName: string;
   startTime: Date;
@@ -45,7 +45,7 @@ export interface GetShowtimeResult {
 
 export interface GetAllShowtimesDTO {
   screenID?: ScreenID;
-  movieID?: MovieID;
+  eventID?: EventID;
   date?: string;
   status?: ShowtimeStatus;
 }
@@ -54,7 +54,7 @@ export interface GetAllShowtimesRequest {
   query: PaginatedQuery<ShowtimeSortField>;
   filters?: {
     screenID?: ScreenID;
-    movieID?: MovieID;
+    eventID?: EventID;
     date?: string;
     status?: ShowtimeStatus;
   };
@@ -62,8 +62,8 @@ export interface GetAllShowtimesRequest {
 
 export interface ShowtimeListItem {
   id: string;
-  movieID: string;
-  movieTitle: string;
+  eventID: string;
+  eventTitle: string;
   screenID: string;
   screenName: string;
   startTime: Date;

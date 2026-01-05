@@ -3,7 +3,7 @@ import { PortModule } from "./port_module";
 import { RepositoryModule } from "./repository_module";
 import { TokenManagementService } from "src/domain/services/token_management_service";
 import { InfraModule } from "./infra_module";
-import { MovieSyncService } from "src/domain/services/movie_sync_service";
+import { EventSyncService } from "src/domain/services/event_sync_service";
 import { ProviderModule } from "./provider_module";
 
 @Module({
@@ -14,10 +14,10 @@ import { ProviderModule } from "./provider_module";
       useClass: TokenManagementService,
     },
     {
-      provide: MovieSyncService.name,
-      useClass: MovieSyncService,
+      provide: EventSyncService.name,
+      useClass: EventSyncService,
     },
   ],
-  exports: [TokenManagementService.name, MovieSyncService.name],
+  exports: [TokenManagementService.name, EventSyncService.name],
 })
 export class DomainServiceModule {}

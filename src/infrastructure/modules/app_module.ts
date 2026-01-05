@@ -8,6 +8,7 @@ import { RequestLoggerMiddleware } from "../http/middlewares/request_logger_midd
 import { JobModule } from "./job_module";
 import { EventModule } from "./event_module";
 import { StatusCodeInterceptor } from "src/infrastructure/http/interceptors/status_code_interceptor";
+import { QueryModule } from "./query_module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { StatusCodeInterceptor } from "src/infrastructure/http/interceptors/stat
     EventModule,
     JobModule,
     ControllerModule,
+    QueryModule,
   ],
   providers: [
     {

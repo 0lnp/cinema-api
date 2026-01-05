@@ -2,6 +2,7 @@ import * as z from "zod";
 
 export const UserRegisterDTOSchema = z.object({
   displayName: z.string().min(2).max(100),
+  fullName: z.string().min(2).max(200),
   email: z.email(),
   password: z
     .string()

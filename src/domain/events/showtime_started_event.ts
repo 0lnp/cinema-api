@@ -1,11 +1,11 @@
 import { DomainEvent } from "./domain_event";
 import { ShowtimeID } from "../value_objects/showtime_id";
-import { MovieID } from "../value_objects/movie_id";
+import { EventID } from "../value_objects/event_id";
 
 export class ShowtimeStartedEvent extends DomainEvent {
   public constructor(
     public readonly showtimeID: ShowtimeID,
-    public readonly movieID: MovieID,
+    public readonly eventID: EventID,
   ) {
     super();
   }
